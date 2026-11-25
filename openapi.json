@@ -12185,6 +12185,13 @@
           "nullable": true
         }
       },
+      "EngineRequiredKeysResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "ScriptResponse": {
         "type": "object",
         "properties": {},
@@ -17554,6 +17561,26 @@
       },
       "ErrorResponse400NotAnOutcomeKeyOrMissingIdentityHeadersOnThePlatformKeyForwa": {
         "description": "Not an outcome key, or missing identity headers on the platform key (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400NotAnOutcomeKeyForwardedVerbatim": {
+        "description": "Not an outcome key (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502RequiredKeysUnreadableAProducerCouldNotAnswerForwardedVerbat": {
+        "description": "`required_keys_unreadable`: a producer could not answer (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
@@ -124612,6 +124639,210 @@
           }
         },
         "operationId": "getV1EnginesByOutcome"
+      }
+    },
+    "/v1/engines/{outcome}/required-keys": {
+      "get": {
+        "tags": [
+          "Scripts"
+        ],
+        "summary": "The keys a campaign needs, and which ones you already hold",
+        "description": "For a campaign run on your own keys (SOLO-PLAN-1125): the providers whose key the campaign's Plan needs, what each is for, and whether your organization already holds it (`held`). `outcome` = the campaign's Target outcome; `campaignId` (optional) = read the scripts that campaign's strategy keeps (absent = before launch). `required: false` = only some scripts need it (one choice among several). Your organization and user come from your key or session. Reads only. Byte passthrough to workflow-service GET /internal/engines/{outcome}/required-keys; status and body owned by the downstream service.\n\nResponse: documented from workflow-service GET /internal/engines/{outcome}/required-keys, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/workflow.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "the campaign's Target outcome key (e.g. meeting_booked)"
+            },
+            "required": true,
+            "description": "the campaign's Target outcome key (e.g. meeting_booked)",
+            "name": "outcome",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The campaign whose kept scripts are read (absent = before launch)"
+            },
+            "required": false,
+            "description": "The campaign whose kept scripts are read (absent = before launch)",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from workflow-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "type": "string",
+                      "description": "The Target's Engine the Plan was read from."
+                    },
+                    "campaignId": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "The campaign whose strategy narrowed each Engine; null = before launch (the scripts kept with no campaign)."
+                    },
+                    "keys": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "type": "string",
+                            "description": "The provider, as key-service names it (e.g. `anthropic`, `apollo`)."
+                          },
+                          "domain": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Its domain, for a logo; null when unknown."
+                          },
+                          "held": {
+                            "type": "boolean",
+                            "description": "The org already holds its own key for it (key-service)."
+                          },
+                          "required": {
+                            "type": "boolean",
+                            "description": "Every script of some Engine on the Plan needs it; false = one choice among several (the Rating can run another script without it)."
+                          },
+                          "for": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "engine": {
+                                  "type": "string"
+                                },
+                                "script": {
+                                  "type": "string"
+                                },
+                                "scriptName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "call": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "engine",
+                                "script",
+                                "scriptName",
+                                "call"
+                              ]
+                            },
+                            "description": "What it is for: the Engine, the script (dynasty + client-readable name), the call that needs it."
+                          }
+                        },
+                        "required": [
+                          "provider",
+                          "domain",
+                          "held",
+                          "required",
+                          "for"
+                        ]
+                      },
+                      "description": "Every provider the Plan's scripts call, the musts first."
+                    },
+                    "engines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "outcome": {
+                            "type": "string"
+                          },
+                          "scripts": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "dynasty": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "providers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "ready": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "dynasty",
+                                "name",
+                                "providers",
+                                "ready"
+                              ]
+                            }
+                          },
+                          "ready": {
+                            "type": "boolean",
+                            "description": "At least one of its scripts needs only keys the org holds."
+                          }
+                        },
+                        "required": [
+                          "outcome",
+                          "scripts",
+                          "ready"
+                        ]
+                      },
+                      "description": "Each Engine of the Plan (the Target first, then what its scripts read or ask, recursively)."
+                    },
+                    "ready": {
+                      "type": "boolean",
+                      "description": "Every Engine of the Plan has a script the org's keys already let run."
+                    }
+                  },
+                  "required": [
+                    "outcome",
+                    "campaignId",
+                    "keys",
+                    "engines",
+                    "ready"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400NotAnOutcomeKeyForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502RequiredKeysUnreadableAProducerCouldNotAnswerForwardedVerbat"
+          }
+        },
+        "operationId": "getV1EnginesByOutcomeRequiredKeys"
       }
     },
     "/v1/scripts": {

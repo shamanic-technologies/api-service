@@ -21142,6 +21142,28 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/engines/{outcome}/required-keys",
+  tags: ["Scripts"],
+  summary: "The keys a campaign needs, and which ones you already hold",
+  description:
+    "For a campaign run on your own keys (SOLO-PLAN-1125): the providers whose key the campaign's Plan needs, what each is for, and whether your organization already holds it (`held`). " +
+    "`outcome` = the campaign's Target outcome; `campaignId` (optional) = read the scripts that campaign's strategy keeps (absent = before launch). `required: false` = only some scripts need it (one choice among several). " +
+    "Your organization and user come from your key or session. Reads only. Byte passthrough to workflow-service GET /internal/engines/{outcome}/required-keys; status and body owned by the downstream service.",
+  security: authed,
+  request: {
+    params: z.object({ outcome: z.string().openapi({ description: "the campaign's Target outcome key (e.g. meeting_booked)" }) }),
+    query: z.object({ campaignId: z.string().optional().describe("The campaign whose kept scripts are read (absent = before launch)") }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from workflow-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("EngineRequiredKeysResponse") } } },
+    400: { description: "Not an outcome key (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "`required_keys_unreadable`: a producer could not answer (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/scripts",
   tags: ["Scripts"],
   summary: "List scripts (no code)",

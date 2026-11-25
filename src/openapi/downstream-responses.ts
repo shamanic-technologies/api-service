@@ -50,6 +50,7 @@ export const DOWNSTREAM_RESPONSE_SOURCES: Record<string, DownstreamResponseSourc
   "POST /v1/billing/accounts/solo_plan/layers": { service: "billing-service", method: "POST", path: "/v1/accounts/solo_plan/layers" },
   "GET /v1/offers/{offerId}/sales-funnels": { service: "features-service", method: "GET", path: "/internal/catalogue/sales-funnels" },
   "GET /v1/engines/{outcome}": { service: "workflow-service", method: "GET", path: "/internal/engines/{outcome}" },
+  "GET /v1/engines/{outcome}/required-keys": { service: "workflow-service", method: "GET", path: "/internal/engines/{outcome}/required-keys" },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps" },
   "PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps" },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps" },
