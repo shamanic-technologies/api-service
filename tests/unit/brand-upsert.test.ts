@@ -109,7 +109,7 @@ describe("POST /v1/brands – upsert brand", () => {
       .send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 500 when brand-service fails", async () => {

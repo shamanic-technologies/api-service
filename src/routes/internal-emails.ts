@@ -3,6 +3,7 @@ import { authenticatePlatform, AuthenticatedRequest } from "../middleware/auth.j
 import { refuseForwardedIdentity } from "../middleware/server-to-server.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { DeployEmailTemplatesRequestSchema } from "../schemas.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -17,7 +18,7 @@ router.put("/emails/templates", authenticatePlatform, refuseForwardedIdentity, a
   try {
     const parsed = DeployEmailTemplatesRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const result = await callExternalService(

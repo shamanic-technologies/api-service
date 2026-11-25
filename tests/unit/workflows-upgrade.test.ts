@@ -63,7 +63,7 @@ describe("POST /v1/workflows/upgrade route", () => {
     const upgradeIdx = content.indexOf('router.post("/workflows/upgrade"');
     const block = content.slice(upgradeIdx, upgradeIdx + 1000);
     expect(block).toContain("400");
-    expect(block).toContain("Invalid request");
+    expect(block).toContain("invalidRequestBody(parsed.error)");
   });
 });
 

@@ -100,7 +100,7 @@ describe("PUT /platform-prompts", () => {
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
     // Downstream MUST NOT be called
     expect(fetchCalls.find((c) => c.url.includes("/platform-prompts"))).toBeUndefined();
   });
@@ -116,7 +116,7 @@ describe("PUT /platform-prompts", () => {
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when a variable entry is missing name", async () => {
@@ -130,7 +130,7 @@ describe("PUT /platform-prompts", () => {
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 401 without API key", async () => {
@@ -159,7 +159,7 @@ describe("PUT /platform-prompts", () => {
       .send({ prompt: "test", variables: [] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when prompt is missing", async () => {
@@ -169,7 +169,7 @@ describe("PUT /platform-prompts", () => {
       .send({ type: "cold-email", variables: [] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when variables is missing", async () => {
@@ -179,7 +179,7 @@ describe("PUT /platform-prompts", () => {
       .send({ type: "cold-email", prompt: "test" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when type is empty", async () => {
@@ -189,6 +189,6 @@ describe("PUT /platform-prompts", () => {
       .send({ type: "", prompt: "test", variables: [] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 });

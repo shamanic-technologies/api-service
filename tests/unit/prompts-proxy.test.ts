@@ -109,7 +109,7 @@ describe("PUT /v1/prompts — behavioral proxy", () => {
       .send({ sourceType: "cold-email", prompt: "test", variables: ["leadFirstName", "leadLastName"] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
     expect(fetchCalls.find((c) => c.url.includes("/prompts"))).toBeUndefined();
   });
 
@@ -119,7 +119,7 @@ describe("PUT /v1/prompts — behavioral proxy", () => {
       .send({ sourceType: "cold-email", prompt: "test", variables: [{ name: "leadFirstName" }] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
     expect(fetchCalls.find((c) => c.url.includes("/prompts"))).toBeUndefined();
   });
 
@@ -129,7 +129,7 @@ describe("PUT /v1/prompts — behavioral proxy", () => {
       .send({ sourceType: "cold-email", prompt: "test", variables: [{ description: "Lead first name." }] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
     expect(fetchCalls.find((c) => c.url.includes("/prompts"))).toBeUndefined();
   });
 });
@@ -210,7 +210,7 @@ describe("Prompts proxy route — PUT /prompts", () => {
     const block = content.slice(putStart);
 
     expect(block).toContain("400");
-    expect(block).toContain("Invalid request");
+    expect(block).toContain("invalidRequestBody(parsed.error)");
   });
 });
 

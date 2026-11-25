@@ -49,7 +49,8 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     title: "We found your next clients (the website)",
     how:
       "Send the client's website as `url` (add `name` for its display name). Keep `brandId`. Then warm up the first email " +
-      "with `preview-email/prepare` (fire and forget, answers 202).",
+      "with `preview-email/prepare`, `brandId` only (fire and forget, answers 202): no offer exists yet, so never send an " +
+      "empty `offerId`; confirming the offer in step 4 warms it again for that offer.",
     operations: ["POST /v1/brands", "POST /v1/content/preview-email/prepare"],
   },
   {
@@ -63,9 +64,12 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   {
     title: "What you sell",
     how:
-      "Propose offers from what your user says they sell, let them keep ONE, confirm it (`chosenIndex` is optional with one " +
-      "offer) and keep `chosenOfferId`. Then, on your own: list the offer's qualification checks and ask for suggestions " +
-      "when there are none, and get the ideal customer (`icp/suggest` with `offerId`), kept for the next step.",
+      "Propose offers with `{\"source\": \"site\"}` (we read the client's website, up to a minute) or `{\"description\": ...}` " +
+      "(what your user typed). Let them keep ONE, then confirm: send `offers` = the proposals' `offers` array exactly as " +
+      "returned (`chosenIndex` = the kept one, optional with one offer). Keep `chosenOfferId`: it is the `{offerId}` / " +
+      "`offerId` of every later call. Then, on your own: list the offer's qualification checks and ask for suggestions " +
+      "when there are none, and get the ideal customer (`icp/suggest` with `offerId` = `chosenOfferId`); its `icp` is the " +
+      "`targetAudience` of the next step.",
     operations: [
       "POST /v1/brands/{id}/offers/proposals",
       "POST /v1/brands/{id}/offers/confirm",
@@ -77,8 +81,10 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   {
     title: "Who to write to",
     how:
-      "Split the ideal customer (`targetAudience`) into up to 6 segments, size them, let your user keep ONE, confirm it " +
-      "and keep the audience `id`. If confirm answers 409 the audience exists: list it instead.",
+      "Split the ideal customer (`targetAudience` = step 4's `icp`) into up to 6 segments, size them (`estimate` with the " +
+      "`segments` as returned and `offerId`), let your user keep ONE, confirm it (the kept `segments` as returned, " +
+      "`offerId`, `targetAudience`) and keep the audience `id` from `audiences`. If confirm answers 409 the audience " +
+      "exists: list it instead.",
     operations: [
       "POST /v1/orgs/audiences/split",
       "POST /v1/orgs/audiences/split/estimate",
@@ -355,12 +361,23 @@ const resolve = (doc: Json, node: Json | undefined): Json | undefined => {
 function fieldList(doc: Json, schema: Json | undefined, markRequired = true): string {
   const s = resolve(doc, schema);
   if (!s) return "";
+  // A body that is ONE OF several shapes (offer proposals: `{source: "site"}` OR `{description}`) lists each
+  // alternative: an empty line here sent an outside agent in with `{}` (AGENT-SIGNUP-UX-1125).
+  const variants = ((s.anyOf ?? s.oneOf) as Json[] | undefined)?.map((v) => fieldList(doc, v, markRequired)).filter(Boolean);
+  if (variants?.length) return variants.length === 1 ? variants[0] : `EITHER ${variants.map((v) => `(${v})`).join(" OR ")}`;
   const parts = [s, ...((s.allOf as Json[] | undefined) ?? []).map((x) => resolve(doc, x) ?? {})];
   const props = Object.assign({}, ...parts.map((p) => p.properties ?? {}));
   const required = new Set(parts.flatMap((p) => (p.required as string[] | undefined) ?? []));
   const names = Object.keys(props);
   if (names.length === 0) return s.type === "array" ? "a list" : "";
-  return names.map((n) => (markRequired && required.has(n) ? `\`${n}\`*` : `\`${n}\``)).join(", ");
+  return names
+    .map((n) => {
+      const name = markRequired && required.has(n) ? `\`${n}\`*` : `\`${n}\``;
+      // A field with a few allowed values says them: `source`* = "site".
+      const values = (resolve(doc, props[n]) as Json | undefined)?.enum as unknown[] | undefined;
+      return values && values.length <= 4 ? `${name} = ${values.map((v) => JSON.stringify(v)).join(" | ")}` : name;
+    })
+    .join(", ");
 }
 
 function onboardingGuide(doc: Json): string {

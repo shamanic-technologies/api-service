@@ -106,7 +106,7 @@ describe("POST /platform-keys", () => {
       .send({ apiKey: "sk-ant-123" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when apiKey is missing", async () => {
@@ -116,7 +116,7 @@ describe("POST /platform-keys", () => {
       .send({ provider: "anthropic" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when provider is empty", async () => {
@@ -126,6 +126,6 @@ describe("POST /platform-keys", () => {
       .send({ provider: "", apiKey: "sk-ant-123" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 });

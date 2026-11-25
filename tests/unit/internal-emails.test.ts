@@ -128,7 +128,7 @@ describe("PUT /internal/emails/templates", () => {
       .send({ templates: [] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when templates is missing", async () => {

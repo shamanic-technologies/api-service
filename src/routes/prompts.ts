@@ -3,6 +3,7 @@ import { authenticate, authenticatePlatform, requireOrg, requireStaff, requireUs
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { VersionPromptRequestSchema } from "../schemas.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -45,10 +46,7 @@ router.put("/prompts", authenticatePlatform, requireStaff, authenticate, require
   try {
     const parsed = VersionPromptRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: "Invalid request",
-        details: parsed.error.flatten(),
-      });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const result = await callExternalService(

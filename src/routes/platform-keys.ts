@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticatePlatform, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { PlatformKeyRequestSchema } from "../schemas.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -15,7 +16,7 @@ router.post("/", authenticatePlatform, async (req: AuthenticatedRequest, res) =>
   try {
     const parsed = PlatformKeyRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const result = await callExternalService(

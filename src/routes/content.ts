@@ -5,6 +5,7 @@ import { callExternalService, pipeExternalService, externalServices } from "../l
 import { ContentComposeRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.post("/content/compose", authenticate, requireOrg, requireUser, async (re
   try {
     const parsed = ContentComposeRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const result = await callExternalService<{ composedVideoUrl: string }>(

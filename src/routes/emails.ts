@@ -9,6 +9,7 @@ import { SendEmailRequestSchema, DeployEmailTemplatesRequestSchema } from "../sc
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { isStaffCaller, toCustomerEmail } from "../lib/customer-email-view.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -186,7 +187,7 @@ router.post("/emails/send", authenticate, requirePlatformSender, requireOrg, asy
   try {
     const parsed = SendEmailRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const result = await callExternalService(
@@ -456,7 +457,7 @@ router.put("/emails/templates", authenticatePlatform, refuseForwardedIdentity, a
   try {
     const parsed = DeployEmailTemplatesRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const result = await callExternalService(
