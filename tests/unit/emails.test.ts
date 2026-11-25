@@ -132,7 +132,7 @@ describe("POST /v1/emails/send", () => {
       .send({ eventType: "welcome", bccEmails: ["not-an-email"] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when eventType is missing", async () => {
@@ -141,7 +141,7 @@ describe("POST /v1/emails/send", () => {
       .send({ recipientEmail: "user@polarity.com" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 500 when transactional-email service fails", async () => {
@@ -349,7 +349,7 @@ describe("PUT /v1/emails/templates", () => {
       .send({ templates: [] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when templates is missing", async () => {

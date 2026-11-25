@@ -4,6 +4,7 @@ import { callExternalService, callExternalServiceWithStatus, pipeExternalService
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { CreateWorkflowRequestSchema, UpgradeWorkflowRequestSchema, UpdateWorkflowRequestSchema, WorkflowDynastyStatusRequestSchema } from "../schemas.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -600,10 +601,7 @@ router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requi
 
     const parsed = WorkflowDynastyStatusRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: "Invalid request",
-        details: parsed.error.flatten(),
-      });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const { status, data } = await callExternalServiceWithStatus(
@@ -670,10 +668,7 @@ router.put("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
 
     const parsed = UpdateWorkflowRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: "Invalid request",
-        details: parsed.error.flatten(),
-      });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const { status, data } = await callExternalServiceWithStatus(
@@ -827,10 +822,7 @@ router.post("/workflows/create", authenticate, requireOrg, requireUser, async (r
   try {
     const parsed = CreateWorkflowRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: "Invalid request",
-        details: parsed.error.flatten(),
-      });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const { featureSlug, pipeId, description, hints } = parsed.data;
@@ -868,10 +860,7 @@ router.post("/workflows/upgrade", authenticate, requireOrg, requireUser, async (
   try {
     const parsed = UpgradeWorkflowRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({
-        error: "Invalid request",
-        details: parsed.error.flatten(),
-      });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const { workflowDynastySlug, description, hints, dag } = parsed.data;

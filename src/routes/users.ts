@@ -3,6 +3,7 @@ import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/au
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { ResolveUserRequestSchema, ListUsersQuerySchema } from "../schemas.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -49,7 +50,7 @@ router.post("/users/resolve", authenticate, requireOrg, async (req: Authenticate
   try {
     const parsed = ResolveUserRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
 
     const refusal = identityNotProven(req, parsed.data);
@@ -82,7 +83,7 @@ router.get("/users", authenticate, requireOrg, async (req: AuthenticatedRequest,
   try {
     const parsed = ListUsersQuerySchema.safeParse(req.query);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid query parameters", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error, "Invalid query parameters"));
     }
 
     const { email, limit, offset } = parsed.data;

@@ -72,7 +72,7 @@ describe("Workflow update endpoint", () => {
     const block = content.slice(putStart, putEnd);
 
     expect(block).toContain("400");
-    expect(block).toContain("Invalid request");
+    expect(block).toContain("invalidRequestBody(parsed.error)");
   });
 
   it("should import UpdateWorkflowRequestSchema", () => {

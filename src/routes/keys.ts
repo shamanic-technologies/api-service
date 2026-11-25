@@ -4,6 +4,7 @@ import { callExternalService, externalServices } from "../lib/service-client.js"
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema, SetKeySourceRequestSchema, ProviderRequirementsRequestSchema } from "../schemas.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -36,7 +37,7 @@ router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = UpsertKeyRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
 
@@ -200,7 +201,7 @@ router.put("/keys/:provider/source", authenticate, async (req: AuthenticatedRequ
   try {
     const parsed = SetKeySourceRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
     const { provider } = req.params;
@@ -232,7 +233,7 @@ router.post("/keys/provider-requirements", authenticate, async (req: Authenticat
   try {
     const parsed = ProviderRequirementsRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
     const result = await callExternalService(
       externalServices.key,
@@ -283,7 +284,7 @@ router.post("/api-keys", authenticate, requireOrg, requireUser, async (req: Auth
   try {
     const parsed = CreateApiKeyRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
     const { name } = parsed.data;
 
