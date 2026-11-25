@@ -287,6 +287,8 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PUT /v1/local-llm": NO,
   "POST /v1/local-llm/work/claim": NO,
   "POST /v1/local-llm/work/{id}/result": NO,
+  // The founder's OWN choice from the signup page (channel + campaign) recorded; Distry says hello. Not a start/spend the agent proposes (COPILOT-HANDOFF-GATEWAY-1125).
+  "POST /v1/copilot/handoff": NO,
   "POST /v1/platform-uploads": NO,
   "POST /v1/orgs/uploads": NO,
 

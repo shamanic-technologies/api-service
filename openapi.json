@@ -6971,6 +6971,52 @@
           "nullable": true
         }
       },
+      "CopilotHandoffResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "CopilotHandoffAccepted": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "CopilotHandoffBody": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Your campaign Distry starts on your first message"
+          },
+          "sayHelloOn": {
+            "type": "string",
+            "enum": [
+              "whatsapp",
+              "email"
+            ],
+            "description": "The channel Distry writes to you first on"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Send the same key on a retry: one handoff, one hello"
+          }
+        },
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "CopilotHandoffState": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "TacticsListResponse": {
         "type": "object",
         "properties": {},
@@ -56372,6 +56418,123 @@
           }
         },
         "operationId": "postV1LocalLlmWorkByIdResult"
+      }
+    },
+    "/v1/copilot/handoff": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Hand yourself to Distry on WhatsApp or email",
+        "description": "Hand yourself to Distry, our AI, on the channel you pick: Distry then writes to you FIRST there and runs your campaign with you. Your campaign (created stopped) starts on your first message to Distry. Your organization and user come from your key or session, never from the body. Body {campaignId?, sayHelloOn?: \"whatsapp\" | \"email\", idempotencyKey?}, at least one of campaignId / sayHelloOn. Byte passthrough to chat-service POST /orgs/copilot/handoff: its status and body come back verbatim.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopilotHandoffBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Handed off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotHandoffResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted: Distry says hello shortly",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotHandoffAccepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400RefusedWithItsReasonForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409ConflictForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "postV1CopilotHandoff",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Read your handoff to Distry",
+        "description": "Hand yourself to Distry, our AI, on the channel you pick: Distry then writes to you FIRST there and runs your campaign with you. Your campaign (created stopped) starts on your first message to Distry. Your organization and user come from your key or session, never from the body. Answers your handoff state. Byte passthrough to chat-service GET /orgs/copilot/handoff.",
+        "responses": {
+          "200": {
+            "description": "Your handoff state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotHandoffState"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "getV1CopilotHandoff",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
       }
     },
     "/v1/tactics": {

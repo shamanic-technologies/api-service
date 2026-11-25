@@ -9820,6 +9820,47 @@ registry.registerPath({
   },
 });
 
+// The founder hands themselves to Distry on a channel (src/routes/copilot-handoff.ts → chat-service /orgs/copilot/handoff, COPILOT-HANDOFF-GATEWAY-1125)
+const COPILOT_HANDOFF_MODEL =
+  "Hand yourself to Distry, our AI, on the channel you pick: Distry then writes to you FIRST there and runs your campaign with you. " +
+  "Your campaign (created stopped) starts on your first message to Distry. Your organization and user come from your key or session, never from the body.";
+registry.registerPath({
+  method: "post", path: "/v1/copilot/handoff", tags: ["Chat"], security: authed,
+  summary: "Hand yourself to Distry on WhatsApp or email",
+  description: `${COPILOT_HANDOFF_MODEL} Body {campaignId?, sayHelloOn?: "whatsapp" | "email", idempotencyKey?}, at least one of campaignId / sayHelloOn. Byte passthrough to chat-service POST /orgs/copilot/handoff: its status and body come back verbatim.`,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            campaignId: z.string().uuid().optional().openapi({ description: "Your campaign Distry starts on your first message" }),
+            sayHelloOn: z.enum(["whatsapp", "email"]).optional().openapi({ description: "The channel Distry writes to you first on" }),
+            idempotencyKey: z.string().optional().openapi({ description: "Send the same key on a retry: one handoff, one hello" }),
+          }).passthrough().openapi("CopilotHandoffBody"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Handed off", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotHandoffResponse") } } },
+    202: { description: "Accepted: Distry says hello shortly", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotHandoffAccepted") } } },
+    400: { description: "Refused with its reason (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "Conflict (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+registry.registerPath({
+  method: "get", path: "/v1/copilot/handoff", tags: ["Chat"], security: authed,
+  summary: "Read your handoff to Distry",
+  description: `${COPILOT_HANDOFF_MODEL} Answers your handoff state. Byte passthrough to chat-service GET /orgs/copilot/handoff.`,
+  responses: {
+    200: { description: "Your handoff state", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotHandoffState") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // Tactics, strategies and plays — shared catalogue, any authenticated caller (src/routes/plays.ts)
 const PLAYS_MODEL =
   "A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). " +
