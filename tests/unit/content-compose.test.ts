@@ -107,7 +107,7 @@ describe("POST /v1/content/compose", () => {
       .send(noVideo);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when videoUrl is invalid", async () => {
@@ -116,7 +116,7 @@ describe("POST /v1/content/compose", () => {
       .send({ ...validBody, videoUrl: "not-a-url" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when age is not a number", async () => {
@@ -125,7 +125,7 @@ describe("POST /v1/content/compose", () => {
       .send({ ...validBody, age: "thirty-four" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should forward upstream error status", async () => {
@@ -166,7 +166,7 @@ describe("POST /v1/content/compose", () => {
       .send({ ...validBody, layout: "invalid-layout" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 500 when upstream returns unexpected error", async () => {

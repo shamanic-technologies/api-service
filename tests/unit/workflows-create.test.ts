@@ -54,7 +54,7 @@ describe("POST /v1/workflows/create route", () => {
     const createIdx = content.indexOf('router.post("/workflows/create"');
     const block = content.slice(createIdx, createIdx + 1000);
     expect(block).toContain("400");
-    expect(block).toContain("Invalid request");
+    expect(block).toContain("invalidRequestBody(parsed.error)");
   });
 });
 

@@ -9,6 +9,7 @@ import {
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { LeadSearchRequestSchema } from "../schemas.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -348,7 +349,7 @@ router.post("/leads/search", authenticate, requireOrg, requireUser, async (req: 
   try {
     const parsed = LeadSearchRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
     const {
       person_titles,

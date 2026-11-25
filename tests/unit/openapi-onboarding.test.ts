@@ -250,3 +250,34 @@ describe("GET /v1/me/openapi.json selections", () => {
     expect(res.body.tags).toContain("Brand");
   });
 });
+
+/**
+ * AGENT-SIGNUP-UX-1125: an outside agent (no human) sent `{}` to offer proposals (the guide listed no body for a
+ * one-of body), confirm with no body, then `offerId: ""` to icp/suggest and preview-email/prepare. The guide now
+ * says what each call takes and which earlier answer each id comes from.
+ */
+describe("the onboarding guide carries every id from the answer that gives it to the call that needs it", () => {
+  const guide = () => slice({ kind: "onboarding" }).info.description as string;
+  const line = (operationId: string) => guide().split("\n").find((l) => l.includes(`(\`${operationId}\`)`)) ?? "";
+
+  it("a one-of body lists each alternative, with a fixed value spelled out", () => {
+    expect(line("postV1BrandsByIdOffersProposals")).toContain('send EITHER (`source`* = "site") OR (`description`*)');
+  });
+
+  it("confirm takes the proposals' offers as returned, and chosenOfferId is the offerId of every later call", () => {
+    const g = guide();
+    expect(g).toContain("send `offers` = the proposals' `offers` array exactly as returned");
+    expect(g).toContain("Keep `chosenOfferId`: it is the `{offerId}` / `offerId` of every later call");
+    expect(g).toContain("`icp/suggest` with `offerId` = `chosenOfferId`");
+  });
+
+  it("the ICP feeds the audience split, and confirm's audience id is kept", () => {
+    expect(guide()).toContain("`targetAudience` = step 4's `icp`");
+    expect(guide()).toContain("keep the audience `id` from `audiences`");
+  });
+
+  it("the first preview warm-up never sends an empty offerId", () => {
+    expect(guide()).toContain("`brandId` only");
+    expect(guide()).toContain("never send an empty `offerId`");
+  });
+});

@@ -5,6 +5,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandUpsertRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
@@ -16,11 +17,16 @@ router.post("/brands", authenticate, requireOrg, requireUser, async (req: Authen
   try {
     const parsed = BrandUpsertRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+      return res.status(400).json(invalidRequestBody(parsed.error));
     }
     // A brand needs an identity: a website URL, or a name for the no-website case.
     if (!parsed.data.url && !parsed.data.name) {
-      return res.status(400).json({ error: "Invalid request", details: "Either url or name is required" });
+      return res.status(400).json({
+        error: "Invalid request: url or name is required (url = the brand's website, name = its display name when it has no website)",
+        code: "invalid_request",
+        fields: ["url", "name"],
+        details: "Either url or name is required",
+      });
     }
 
     // Pure passthrough: forward the body verbatim (url and/or name, plus any

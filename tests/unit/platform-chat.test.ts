@@ -135,7 +135,7 @@ describe("PUT /platform-chat/config", () => {
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should forward provider + model + thinkingLevel verbatim (passthrough)", async () => {
@@ -210,7 +210,7 @@ describe("PUT /platform-chat/config", () => {
       .send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 
   it("should return 400 when systemPrompt is empty", async () => {
@@ -220,6 +220,6 @@ describe("PUT /platform-chat/config", () => {
       .send({ key: "workflow", systemPrompt: "", allowedTools: ["request_user_input"] });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Invalid request");
+    expect(res.body.error).toMatch(/^Invalid request: /);
   });
 });
