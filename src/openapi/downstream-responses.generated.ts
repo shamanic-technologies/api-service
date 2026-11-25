@@ -17066,6 +17066,153 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/engines/{outcome}/required-keys": {
+    "service": "workflow-service",
+    "method": "GET",
+    "path": "/internal/engines/{outcome}/required-keys",
+    "responses": {
+      "200": {
+        "description": "The keys",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "outcome": {
+              "type": "string",
+              "description": "The Target's Engine the Plan was read from."
+            },
+            "campaignId": {
+              "type": "string",
+              "nullable": true,
+              "description": "The campaign whose strategy narrowed each Engine; null = before launch (the scripts kept with no campaign)."
+            },
+            "keys": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "description": "The provider, as key-service names it (e.g. `anthropic`, `apollo`)."
+                  },
+                  "domain": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Its domain, for a logo; null when unknown."
+                  },
+                  "held": {
+                    "type": "boolean",
+                    "description": "The org already holds its own key for it (key-service)."
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "description": "Every script of some Engine on the Plan needs it; false = one choice among several (the Rating can run another script without it)."
+                  },
+                  "for": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "engine": {
+                          "type": "string"
+                        },
+                        "script": {
+                          "type": "string"
+                        },
+                        "scriptName": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "call": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "engine",
+                        "script",
+                        "scriptName",
+                        "call"
+                      ]
+                    },
+                    "description": "What it is for: the Engine, the script (dynasty + client-readable name), the call that needs it."
+                  }
+                },
+                "required": [
+                  "provider",
+                  "domain",
+                  "held",
+                  "required",
+                  "for"
+                ]
+              },
+              "description": "Every provider the Plan's scripts call, the musts first."
+            },
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "type": "string"
+                  },
+                  "scripts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "dynasty": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "providers": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "ready": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "dynasty",
+                        "name",
+                        "providers",
+                        "ready"
+                      ]
+                    }
+                  },
+                  "ready": {
+                    "type": "boolean",
+                    "description": "At least one of its scripts needs only keys the org holds."
+                  }
+                },
+                "required": [
+                  "outcome",
+                  "scripts",
+                  "ready"
+                ]
+              },
+              "description": "Each Engine of the Plan (the Target first, then what its scripts read or ask, recursively)."
+            },
+            "ready": {
+              "type": "boolean",
+              "description": "Every Engine of the Plan has a script the org's keys already let run."
+            }
+          },
+          "required": [
+            "outcome",
+            "campaignId",
+            "keys",
+            "engines",
+            "ready"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/features/brands/{brandId}/campaign-targets": {
     "service": "features-service",
     "method": "GET",
