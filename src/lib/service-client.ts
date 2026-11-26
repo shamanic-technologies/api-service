@@ -616,6 +616,81 @@ export async function pipeExternalService(
 }
 
 /**
+ * Relay a downstream PUBLIC web page (HTML + its form posts) byte for byte, EVERY status.
+ *
+ * Unlike `pipeExternalService` (a JSON API pipe): the request body is the caller's raw
+ * bytes under the caller's own Content-Type (a form post stays form-encoded), redirects
+ * are NOT followed (a 303 + `Location` reaches the browser untouched, relative or
+ * absolute), and a non-2xx is a PAGE too (the producer's 404 "link expired" HTML), so it
+ * is piped like any other answer instead of thrown. Only a downstream that never answered
+ * throws (`UpstreamUnreachableError` → `respondUpstreamError`).
+ *
+ * The caller must NOT have parsed the body (no `express.urlencoded` on the route):
+ * the request stream itself is forwarded.
+ */
+export const RELAYED_PAGE_HEADERS = ["content-type", "location", "cache-control", "x-robots-tag"] as const;
+
+export async function relayExternalPage(
+  service: { url: string; apiKey: string; dispatcher?: Dispatcher },
+  path: string,
+  options: {
+    method: "GET" | "POST";
+    expressReq: import("express").Request;
+    expressRes: import("express").Response;
+  },
+): Promise<void> {
+  const { method, expressReq, expressRes } = options;
+  const url = downstreamUrl(service.url, path);
+
+  const controller = new AbortController();
+  const abortOnClose = () => controller.abort();
+  expressRes.on("close", abortOnClose);
+
+  try {
+    const headers: Record<string, string> = { "X-API-Key": service.apiKey };
+    const accept = expressReq.get("accept");
+    if (accept) headers.accept = accept;
+    let body: string | undefined; // a form post is text (urlencoded ASCII)
+    if (method === "POST") {
+      const chunks: Buffer[] = [];
+      for await (const chunk of expressReq) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      body = Buffer.concat(chunks).toString("utf8");
+      const contentType = expressReq.get("content-type");
+      if (contentType) headers["content-type"] = contentType;
+    }
+
+    const init: RequestInit & { dispatcher?: Dispatcher } = {
+      method,
+      headers,
+      body,
+      redirect: "manual",
+      signal: controller.signal,
+    };
+    if (service.dispatcher) init.dispatcher = service.dispatcher;
+
+    const response = await fetchWithTransientNetworkRetry(url, init, method);
+
+    expressRes.status(response.status);
+    for (const name of RELAYED_PAGE_HEADERS) {
+      const value = response.headers.get(name);
+      if (value !== null) expressRes.setHeader(name, value);
+    }
+    if (!response.body) {
+      expressRes.end();
+      return;
+    }
+    await pipeline(Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), expressRes);
+  } catch (error: any) {
+    if (controller.signal.aborted) return;
+    const cause = error?.cause ? ` (cause: ${error.cause?.code || error.cause?.message || error.cause})` : "";
+    console.error(`[relayExternalPage] ${method} ${url} failed: ${error?.message}${cause}`);
+    throw error;
+  } finally {
+    expressRes.off("close", abortOnClose);
+  }
+}
+
+/**
  * Stream an external service SSE response directly to the Express response.
  * Does NOT buffer or parse — pipes chunks through for real-time streaming.
  */

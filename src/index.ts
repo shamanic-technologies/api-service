@@ -55,6 +55,7 @@ import agentRequestsRoutes from "./routes/agent-requests.js";
 import localLlmRoutes from "./routes/local-llm.js";
 import copilotHandoffRoutes from "./routes/copilot-handoff.js";
 import soloPlanRoutes from "./routes/solo-plan.js";
+import soloPlanPayLinkRoutes from "./routes/solo-plan-pay-link.js";
 import catalogueStaffRoutes from "./routes/catalogue-staff.js";
 import enginesRoutes from "./routes/engines.js";
 import playsRoutes from "./routes/plays.js";
@@ -316,6 +317,7 @@ app.use(agentSkillsRoutes); // read-only agent skill tree for any authenticated 
 app.use(agentRequestsRoutes); // requests to the team (bug, feature incl. a new outcome/trigger, skill upgrade, human) for any agent, full /v1 paths
 app.use(localLlmRoutes); // the org's LLM on the user's own Claude Code (chat-service /orgs/local-llm*)
 app.use(copilotHandoffRoutes); // the founder hands themselves to Distry on a channel (chat-service /orgs/copilot/handoff)
+app.use(soloPlanPayLinkRoutes); // PUBLIC (token is the auth): the solo plan pay page + its form post, relayed byte for byte to billing-service /public/solo-plan/pay/:token
 app.use(soloPlanRoutes); // the solo-founder plan, byte pipes to billing-service /v1/accounts/solo_plan* (SOLO-PLAN-1125)
 app.use(chatSkillsStaffRoutes); // staff-only Copilot skills + staff requests (authenticatePlatform + requireStaff), full /v1 paths
 app.use(catalogueStaffRoutes); // agent catalogue: customer reads for any signed-in client (catalogueReader), staff objects + writes staff-only, full /v1 paths
