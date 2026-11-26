@@ -1012,6 +1012,24 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/audit/ai-message-models",
+  tags: ["Features"],
+  summary: "Daily series of AI-written messages with no model named (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), cross-org, no org context. " +
+    "Byte passthrough to features-service GET /internal/stats/ai-message-models: the stored daily series of messages our AI wrote, " +
+    "split by whether the model that wrote them is named. Query string (`days`) forwarded verbatim. Status and body owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffAiMessageModelsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/audit/factory-shadow/monitoring",
   tags: ["Features"],
   summary: "GTM Factory shadow Monitoring: per client org and day, funnel campaigns whose shadow plan or Jev pick differs from what runs (staff only)",

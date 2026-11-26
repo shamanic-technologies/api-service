@@ -37,6 +37,7 @@ const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE, FEATURES_BASE } = vi.hoisted(() =
  *   GET /v1/features/audit/box-health          → features-service GET /internal/box-health
  *   GET /v1/features/audit/box-checks          → features-service GET /internal/box-checks
  *   GET /v1/features/audit/saas-cash           → features-service GET /internal/stats/saas-cash
+ *   GET /v1/features/audit/ai-message-models   → features-service GET /internal/stats/ai-message-models
  *
  * No auth mock: the real authenticatePlatform + requireStaff run, and every refusal
  * asserts ZERO outbound calls. Bodies are fixtures — the producers own the shape.
@@ -199,6 +200,12 @@ const ROUTES = [
     path: "/v1/features/audit/saas-cash",
     query: "?x=1",
     downstream: `${FEATURES_BASE}/internal/stats/saas-cash`,
+    key: "features-test-key",
+  },
+  {
+    path: "/v1/features/audit/ai-message-models",
+    query: "?days=30",
+    downstream: `${FEATURES_BASE}/internal/stats/ai-message-models`,
     key: "features-test-key",
   },
 ];

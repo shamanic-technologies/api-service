@@ -899,6 +899,26 @@ router.get("/features/audit/saas-cash", authenticatePlatform, requireStaff, asyn
 });
 
 /**
+ * GET /v1/features/audit/ai-message-models → features-service GET /internal/stats/ai-message-models — STAFF ONLY
+ * (MODEL-TAG-EVERY-AI-MESSAGE-1126). Stored daily series of AI-written messages with no model named, charted on
+ * dashboard v2 Monitoring. Cross-org staff figure, no org context: authenticatePlatform + requireStaff like saas-cash.
+ * Byte passthrough (status + body piped), query string (`days`) forwarded verbatim. Declared before `/features/:slug/*`.
+ */
+router.get("/features/audit/ai-message-models", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `/internal/stats/ai-message-models${rawQueryString(req.originalUrl)}`,
+      { headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff AI message models read error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read AI message models");
+  }
+});
+
+/**
  * GTM Factory step 1, SHADOW ONLY (FACTORY-P1-BRIEF-JUDGE-SHADOW-PLAN) — STAFF ONLY, fleet-wide, no org context:
  *   GET /v1/features/audit/factory-shadow/monitoring → features-service GET /internal/factory-shadow/monitoring
  *     per client org and day, the funnel campaigns whose shadow plan or Jev pick differs from what runs (dashboard v2 Monitoring)
