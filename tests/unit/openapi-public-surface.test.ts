@@ -76,6 +76,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/features/audit/box-health",
   "get /v1/features/audit/box-checks",
   "get /v1/features/audit/saas-cash",
+  "get /v1/features/audit/ai-message-models",
   "get /v1/features/audit/factory-shadow/monitoring",
   "get /v1/features/audit/factory-shadow/eval",
   "get /v1/features/{featureSlug}/revenue/actual-cost",

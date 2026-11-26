@@ -512,6 +512,13 @@
           "nullable": true
         }
       },
+      "StaffAiMessageModelsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "StaffFactoryShadowMonitoringResponse": {
         "type": "object",
         "properties": {},
@@ -12651,6 +12658,16 @@
       },
       "ErrorResponse503NotComputedYetSaasCashNotComputedYetForwardedVerbatim": {
         "description": "Not computed yet: `saas_cash_not_computed_yet` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502UpstreamServiceErrorForwardedVerbatim": {
+        "description": "Upstream service error (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
