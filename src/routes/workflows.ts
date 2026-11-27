@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, requireStaffActor, AuthenticatedRequest } from "../middleware/auth.js";
+import { markCodeBearing } from "../lib/security-watch.js";
 import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
@@ -274,7 +275,7 @@ router.get("/workflows/summaries", authenticate, requireOrg, requireUser, async 
  * POST /v1/workflows
  * Create a new workflow
  */
-router.post("/workflows", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.workflow,
@@ -488,7 +489,7 @@ router.post("/workflows/:id/validate", authenticate, requireOrg, requireUser, as
  * validated here — workflow-service owns `{ action, prompt }` and refuses what it
  * does not accept.
  */
-router.post("/workflows/dynasty/:workflowDynastySlug/prompt-edit", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/dynasty/:workflowDynastySlug/prompt-edit", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     await pipeExternalService(
       externalServices.workflow,
@@ -502,7 +503,7 @@ router.post("/workflows/dynasty/:workflowDynastySlug/prompt-edit", authenticate,
   }
 });
 
-router.post("/workflows/:id/prompt-edit", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/:id/prompt-edit", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
@@ -534,7 +535,7 @@ router.post("/workflows/:id/prompt-edit", authenticate, requireOrg, requireUser,
  * caller with the producer's status and body. The body is not validated here —
  * workflow-service owns `{ changes, description?, tags? }`.
  */
-router.post("/workflows/dynasty/:workflowDynastySlug/fork", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/dynasty/:workflowDynastySlug/fork", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     await pipeExternalService(
       externalServices.workflow,
@@ -548,7 +549,7 @@ router.post("/workflows/dynasty/:workflowDynastySlug/fork", authenticate, requir
   }
 });
 
-router.post("/workflows/:id/fork", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/:id/fork", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
@@ -590,7 +591,7 @@ function deprecationActorHeaders(req: AuthenticatedRequest): Record<string, stri
  * STAFF ONLY (`requireStaffActor`): retiring a dynasty stops it for every client.
  * Listed in `STAFF_KEY_OPERATIONS`.
  */
-router.post("/workflows/retire-by-content", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/retire-by-content", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     await pipeExternalService(
       externalServices.workflow,
@@ -612,7 +613,7 @@ router.post("/workflows/retire-by-content", authenticate, requireOrg, requireUse
  * STAFF ONLY (`requireStaffActor`, TEMPLATE-MODEL-STATUS-1019): a dynasty is a cross-org
  * catalogue object, deprecating it stops it for every client. Listed in `STAFF_KEY_OPERATIONS`.
  */
-router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { workflowDynastySlug } = req.params;
 
@@ -652,7 +653,7 @@ router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requi
  * these are distinct segment counts, but keeping the status routes together keeps
  * the dynasty/version pair readable.
  */
-router.put("/workflows/:id/status", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.put("/workflows/:id/status", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
@@ -678,7 +679,7 @@ router.put("/workflows/:id/status", authenticate, requireOrg, requireUser, requi
  * PUT /v1/workflows/:id
  * Update a workflow (name, description, tags, dag)
  */
-router.put("/workflows/:id", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.put("/workflows/:id", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
@@ -740,7 +741,7 @@ router.get("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
  * POST /v1/workflows/:id/execute
  * Execute a workflow by ID
  */
-router.post("/workflows/:id/execute", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/:id/execute", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
@@ -835,7 +836,7 @@ router.post("/workflow-runs/:id/cancel", authenticate, requireOrg, requireUser, 
  * POST /v1/workflows/create
  * Create a new workflow dynasty from natural language via workflow-service
  */
-router.post("/workflows/create", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/create", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = CreateWorkflowRequestSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -873,7 +874,7 @@ router.post("/workflows/create", authenticate, requireOrg, requireUser, requireS
  * POST /v1/workflows/upgrade
  * Upgrade an existing workflow within its dynasty via workflow-service
  */
-router.post("/workflows/upgrade", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/upgrade", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = UpgradeWorkflowRequestSchema.safeParse(req.body);
     if (!parsed.success) {
