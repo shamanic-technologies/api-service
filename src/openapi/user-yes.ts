@@ -203,6 +203,7 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "POST /v1/brands/extract-fields": NO,
   "POST /v1/brands/extract-images": NO,
   "PUT /v1/brands/{id}/leg-rates": NO,
+  "PATCH /v1/brands/{id}/offers/{offerId}": NO,
   "PUT /v1/brands/{id}/offers/{offerId}/economics": NO,
   "POST /v1/brands/{id}/offers/proposals": NO,
   "POST /v1/brands/{id}/offers/confirm": NO,
