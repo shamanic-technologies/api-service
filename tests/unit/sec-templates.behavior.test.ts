@@ -44,6 +44,7 @@ const PHISH = {
 const SEND = { eventType: "phish25880a", recipientEmail: "victim@example.com", metadata: { firstName: "A" } };
 
 let calls: string[] = [];
+let bodies: any[] = [];
 
 function app() {
   const a = express();
@@ -55,9 +56,11 @@ function app() {
 
 beforeEach(() => {
   calls = [];
+  bodies = [];
   process.env.ADMIN_DISTRIBUTE_API_KEY = PLATFORM_KEY;
-  global.fetch = vi.fn().mockImplementation(async (url: string) => {
+  global.fetch = vi.fn().mockImplementation(async (url: string, init?: any) => {
     calls.push(new URL(url).pathname);
+    bodies.push(init?.body ? JSON.parse(init.body) : undefined);
     return { ok: true, status: 200, json: () => Promise.resolve({ ok: true }) };
   }) as any;
 });
@@ -121,5 +124,89 @@ describe("POST /v1/emails/send admits platform senders only", () => {
     const res = await request(app()).post("/v1/emails/send").set("x-email", staff).send({ eventType: "campaign_created" });
     expect(res.status).toBe(200);
     expect(calls).toEqual(["/send"]);
+  });
+});
+
+/**
+ * SELF-EMAILS-1127. #1547 also refused the customer dashboard's own lifecycle emails (welcome,
+ * signup_notification, first_payment, goal_launched): new clients got no welcome from
+ * 2026-11-20. A customer (browser session or user key) may fire those about ITSELF again: no
+ * caller-chosen recipient, copy, reply-to or content; the body reaching the sender is rebuilt
+ * from the vetted fields only.
+ */
+describe("POST /v1/emails/send: a customer fires its own lifecycle emails only", () => {
+  const browser = (r: request.Test) =>
+    r.set("X-API-Key", PLATFORM_KEY).set("x-email", "founder@client.com");
+  const userKey = (r: request.Test) => r.set("Authorization", "Bearer distrib.usr_client");
+
+  for (const [label, as] of [["browser session", browser], ["user key", userKey]] as const) {
+    it(`${label}: welcome with no recipient is sent to the acting user`, async () => {
+      const res = await as(request(app()).post("/v1/emails/send")).send({ eventType: "welcome", metadata: { timestamp: "2026-11-27T10:00:00Z" } });
+      expect(res.status).toBe(200);
+      expect(calls).toEqual(["/send"]);
+      expect(bodies[0]).toEqual({
+        orgId: "3afacd9a-fe2f-4413-b51f-217f30920830",
+        userId: "user_attacker",
+        eventType: "welcome",
+        metadata: { timestamp: "2026-11-27T10:00:00Z" },
+      });
+    });
+
+    it(`${label}: welcome with recipientEmail is refused 400, nothing sent`, async () => {
+      const res = await as(request(app()).post("/v1/emails/send")).send({ eventType: "welcome", recipientEmail: "victim@example.com" });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("self_send_field_refused");
+      expect(res.body.fields).toEqual(["recipientEmail"]);
+      expect(calls).toEqual([]);
+    });
+
+    it(`${label}: an arbitrary eventType is refused 403, nothing sent`, async () => {
+      const res = await as(request(app()).post("/v1/emails/send")).send({ eventType: "phish25880a" });
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe(label === "user key" ? "platform_only" : "browser_session_refused");
+      expect(calls).toEqual([]);
+    });
+  }
+
+  it("every dashboard call shape passes: signup_notification + promoCode, first_payment, goal_launched + outcomeNoun", async () => {
+    for (const body of [
+      { eventType: "signup_notification", metadata: { timestamp: "t", promoCode: "BF50" } },
+      { eventType: "first_payment", metadata: { timestamp: "t" } },
+      { eventType: "goal_launched", metadata: { timestamp: "t", outcomeNoun: "meetings" } },
+      { eventType: "welcome" },
+    ]) {
+      const res = await browser(request(app()).post("/v1/emails/send")).send(body);
+      expect(res.status).toBe(200);
+    }
+    expect(calls).toHaveLength(4);
+  });
+
+  it("cc, bcc, reply-to, tracking ids and foreign metadata keys are each refused and named", async () => {
+    const res = await browser(request(app()).post("/v1/emails/send")).send({
+      eventType: "welcome",
+      bccEmails: ["x@example.com"],
+      ccEmails: ["y@example.com"],
+      replyToEmail: "z@example.com",
+      productId: "p",
+      metadata: { timestamp: "t", firstName: "Click http://evil.example", email: "victim@example.com" },
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.fields).toEqual(["bccEmails", "ccEmails", "replyToEmail", "productId", "metadata.firstName", "metadata.email"]);
+    expect(calls).toEqual([]);
+  });
+
+  it("an allowed metadata key carrying a non-string or an oversized value is refused", async () => {
+    for (const metadata of [{ outcomeNoun: { html: "<a>" } }, { outcomeNoun: "x".repeat(201) }]) {
+      const res = await browser(request(app()).post("/v1/emails/send")).send({ eventType: "goal_launched", metadata });
+      expect(res.status).toBe(400);
+      expect(res.body.fields).toEqual(["metadata.outcomeNoun"]);
+    }
+    expect(calls).toEqual([]);
+  });
+
+  it("a platform sender keeps every field (team-joined email to a chosen recipient)", async () => {
+    const res = await request(app()).post("/v1/emails/send").send({ eventType: "welcome", recipientEmail: "admin@client.com" });
+    expect(res.status).toBe(200);
+    expect(bodies[0].recipientEmail).toBe("admin@client.com");
   });
 });
