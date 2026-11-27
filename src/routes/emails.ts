@@ -147,47 +147,112 @@ router.get(
 );
 
 /**
- * SEC-TEMPLATES-1120: who may send one of OUR transactional templates.
+ * SEC-TEMPLATES-1120 + SELF-EMAILS-1127: who may send one of OUR transactional templates.
  *
  * `POST /v1/emails/send` picks a platform template by `eventType`, a recipient by
  * `recipientEmail`/`bccEmails` and fills `{{variables}}` from `metadata`, then sends it from
- * our domains. That is not a customer feature: on 2026-11-20 an API-signup org scanned the
- * gateway with its user key and sent 12 times. Its only legitimate callers are our own
- * servers (dashboard outcome digest, staff digest, team-joined email: platform key +
- * external identity, never `x-email`) and the staff admin app (platform key + staff `x-email`).
+ * our domains. On 2026-11-20 an API-signup org scanned the gateway with its user key and sent
+ * 12 times to addresses of its choice. Two kinds of caller remain:
  *
- *  - a user key (Bearer, any org) → 403 `platform_only`;
- *  - the platform key carrying a NON-staff `x-email` → 403 `browser_session_refused`: that is
- *    the customer dashboard's `/api/v1/*` browser proxy relaying a signed-in customer (it
- *    stamps the session's email; our server callers never send one).
+ *  - PLATFORM senders, unchanged: our own servers (dashboard outcome digest, staff digest,
+ *    team-joined email: platform key + external identity, never `x-email`) and the staff admin
+ *    app (platform key + staff `x-email`). Any event, any field.
+ *  - Everyone else (a user key, or the customer dashboard's `/api/v1/*` browser proxy relaying
+ *    a signed-in customer: platform key + that customer's `x-email`) may only fire one of the
+ *    product's lifecycle events ABOUT THEMSELVES (`SELF_EVENTS`): no recipient, cc, bcc,
+ *    reply-to, brand, campaign or product field, and only the metadata keys the dashboard
+ *    sends for that event. transactional-email-service then delivers it to the acting user
+ *    (resolved from `x-user-id`), or to our staff list for a staff-routed event. Since #1547
+ *    refused these too, new clients got no welcome email (SELF-EMAILS-1127).
+ *
+ * Refusals: an event outside `SELF_EVENTS` → 403 `platform_only` (user key) /
+ * `browser_session_refused` (browser session); a self event carrying any other field or
+ * metadata key → 400 `self_send_field_refused` naming them.
  */
-export function requirePlatformSender(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  if (req.authType !== "admin") {
-    return res.status(403).json({
-      error: "Transactional emails are sent by distribute.you itself, not through a customer key.",
-      code: "platform_only",
-    });
-  }
+const SELF_EVENTS: Record<string, readonly string[]> = {
+  welcome: ["timestamp"],
+  signup_notification: ["timestamp", "promoCode"],
+  first_payment: ["timestamp"],
+  goal_launched: ["timestamp", "outcomeNoun"],
+};
+const SELF_EVENT_BODY_KEYS = new Set(["eventType", "metadata"]);
+const SELF_METADATA_MAX_LENGTH = 200;
+
+function isPlatformSender(req: AuthenticatedRequest): boolean {
+  if (req.authType !== "admin") return false;
   const email = req.headers["x-email"];
-  if (email !== undefined && !isStaffEmail(String(email))) {
+  return email === undefined || isStaffEmail(String(email));
+}
+
+type SendRequest = AuthenticatedRequest & { selfSend?: { eventType: string; metadata: Record<string, string> } };
+
+export function requirePlatformSender(req: SendRequest, res: Response, next: NextFunction) {
+  if (isPlatformSender(req)) return next();
+
+  const body = (req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {}) as Record<string, unknown>;
+  const eventType = typeof body.eventType === "string" ? body.eventType : undefined;
+  const allowedMetadata = eventType !== undefined && Object.prototype.hasOwnProperty.call(SELF_EVENTS, eventType)
+    ? SELF_EVENTS[eventType]
+    : undefined;
+  if (!eventType || !allowedMetadata) {
+    if (req.authType !== "admin") {
+      return res.status(403).json({
+        error: `Transactional emails are sent by distribute.you itself, not through a customer key. A customer may only trigger its own lifecycle emails: ${Object.keys(SELF_EVENTS).join(", ")}.`,
+        code: "platform_only",
+      });
+    }
     return res.status(403).json({
-      error: "Transactional emails cannot be sent from a customer browser session.",
+      error: `Transactional emails cannot be sent from a customer browser session, except its own lifecycle emails: ${Object.keys(SELF_EVENTS).join(", ")}.`,
       code: "browser_session_refused",
     });
   }
+
+  const refused = Object.keys(body).filter((k) => !SELF_EVENT_BODY_KEYS.has(k));
+  const metadata = body.metadata;
+  if (metadata !== undefined && (metadata === null || typeof metadata !== "object" || Array.isArray(metadata))) {
+    refused.push("metadata");
+  } else if (metadata !== undefined) {
+    for (const [key, value] of Object.entries(metadata as Record<string, unknown>)) {
+      if (!allowedMetadata.includes(key) || typeof value !== "string" || value.length > SELF_METADATA_MAX_LENGTH) {
+        refused.push(`metadata.${key}`);
+      }
+    }
+  }
+  if (refused.length > 0) {
+    return res.status(400).json({
+      error: `'${eventType}' is delivered to you (or to our team) only: remove ${refused.join(", ")}. Allowed: eventType, metadata.{${allowedMetadata.join(", ")}} (strings up to ${SELF_METADATA_MAX_LENGTH} characters).`,
+      code: "self_send_field_refused",
+      fields: refused,
+    });
+  }
+  if (!req.userId) {
+    return res.status(400).json({
+      error: `'${eventType}' is sent to the acting user: this request carries no user.`,
+      code: "self_send_no_user",
+    });
+  }
+
+  req.selfSend = { eventType, metadata: (metadata ?? {}) as Record<string, string> };
   return next();
 }
 
 /**
  * POST /v1/emails/send
- * Send a transactional email via the transactional-email service. Platform senders only
- * (`requirePlatformSender`, SEC-TEMPLATES-1120).
+ * Send a transactional email via the transactional-email service. Platform senders send any
+ * event; anyone else only its own lifecycle events (`requirePlatformSender`).
  */
-router.post("/emails/send", authenticate, requirePlatformSender, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.post("/emails/send", authenticate, requireOrg, requirePlatformSender, async (req: SendRequest, res) => {
   try {
-    const parsed = SendEmailRequestSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json(invalidRequestBody(parsed.error));
+    let body: Record<string, unknown>;
+    if (req.selfSend) {
+      // Rebuilt from the vetted fields only: nothing the caller sent beyond them reaches the sender.
+      body = { orgId: req.orgId, userId: req.userId, eventType: req.selfSend.eventType, metadata: req.selfSend.metadata };
+    } else {
+      const parsed = SendEmailRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json(invalidRequestBody(parsed.error));
+      }
+      body = { orgId: req.orgId, userId: req.userId, ...parsed.data };
     }
 
     const result = await callExternalService(
@@ -196,11 +261,7 @@ router.post("/emails/send", authenticate, requirePlatformSender, requireOrg, asy
       {
         method: "POST",
         headers: buildInternalHeaders(req),
-        body: {
-          orgId: req.orgId,
-          userId: req.userId,
-          ...parsed.data,
-        },
+        body,
       }
     );
     res.json(result);
