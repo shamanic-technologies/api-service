@@ -215,6 +215,19 @@ describe("probing burst", () => {
     expect(alerts).toHaveLength(0);
   });
 
+  it("a sweep of made-up routes with a customer key (never authenticated) is counted under the key fingerprint", async () => {
+    const a = app();
+    for (let i = 0; i < PROBE_DISTINCT_4XX; i++) {
+      const res = await request(a).get(`/v1/made-up-${i}`).set({ authorization: "Bearer distrib.usr_attacker", ...EDGE("203.0.113.77") });
+      expect(res.status).toBe(404);
+    }
+    await settle();
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].kind).toBe("probe_burst");
+    expect(alerts[0].subject).toMatch(/^key:[0-9a-f]{16}$/);
+    expect(alerts[0].evidence).not.toContain("distrib.usr_attacker");
+  });
+
   it("templates collapse ids", () => {
     expect(routeTemplate("GET", "/v1/brands/3f2b1c4d-1111-4222-8333-444455556666/offers/12")).toBe("GET /v1/brands/{id}/offers/{n}");
   });

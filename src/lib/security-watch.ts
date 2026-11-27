@@ -4,6 +4,7 @@ import { pathRefusalReason } from "../middleware/path-guard.js";
 import { isStaffEmail, isStaffHuman } from "./staff.js";
 import { callExternalService, externalServices } from "./service-client.js";
 import { recordAudit, type AuditRow } from "./security-audit-store.js";
+import { keyFingerprint } from "./call-log.js";
 
 /**
  * Gateway intrusion alerts + audit trail (SECURITY-ALERTS-1128, owner 2026-11-28).
@@ -364,7 +365,19 @@ export function observe(req: WatchedRequest, status: number, now: number): void 
   }
 
   // 7. Probing: many distinct routes answered 4xx for one non-staff account.
-  const probeSubject = req.authType === "user_key" ? req.userId : req.authType === "admin" && externalUserId ? (req.userId ?? externalUserId) : undefined;
+  // A route that does not exist never authenticates, so a sweep of made-up paths with a
+  // customer key is counted under the key's one-way fingerprint (the 2026-11-20 sweep hit 212).
+  const probeSubject =
+    req.authType === "user_key"
+      ? req.userId
+      : req.authType === "admin"
+        ? externalUserId
+          ? (req.userId ?? externalUserId)
+          : undefined
+        : (() => {
+            const fp = keyFingerprint(header(req, "authorization") ?? undefined);
+            return fp ? `key:${fp}` : undefined;
+          })();
   if (probeSubject && !staff && status >= 400 && status < 500 && status !== 402) {
     const events = probe4xx.add(probeSubject, routeTemplate(method, path), now);
     const distinct = new Set(events.map((e) => e.value));
