@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, requireStaffActor, AuthenticatedRequest } from "../middleware/auth.js";
+import { markCodeBearing } from "../lib/security-watch.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
@@ -69,19 +70,19 @@ router.get("/scripts/:id", authenticate, requireOrg, requireUser, (req: Authenti
   pipe(req, res, "GET", `/scripts/${encodeURIComponent(req.params.id)}`, buildInternalHeaders(req), "read script"));
 
 // Staff writes.
-router.post("/scripts", authenticate, requireOrg, requireUser, requireStaffActor, (req: AuthenticatedRequest, res) =>
+router.post("/scripts", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, (req: AuthenticatedRequest, res) =>
   pipe(req, res, "POST", "/scripts", staffActorHeaders(req), "create script"));
 
-router.post("/scripts/dynasty/:outcome/:dynasty/upgrade", authenticate, requireOrg, requireUser, requireStaffActor, (req: AuthenticatedRequest, res) =>
+router.post("/scripts/dynasty/:outcome/:dynasty/upgrade", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, (req: AuthenticatedRequest, res) =>
   pipe(req, res, "POST", `${dynastyPath(req)}/upgrade`, staffActorHeaders(req), "upgrade script"));
 
-router.post("/scripts/dynasty/:outcome/:dynasty/fork", authenticate, requireOrg, requireUser, requireStaffActor, (req: AuthenticatedRequest, res) =>
+router.post("/scripts/dynasty/:outcome/:dynasty/fork", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, (req: AuthenticatedRequest, res) =>
   pipe(req, res, "POST", `${dynastyPath(req)}/fork`, staffActorHeaders(req), "fork script"));
 
-router.put("/scripts/dynasty/:outcome/:dynasty/status", authenticate, requireOrg, requireUser, requireStaffActor, (req: AuthenticatedRequest, res) =>
+router.put("/scripts/dynasty/:outcome/:dynasty/status", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, (req: AuthenticatedRequest, res) =>
   pipe(req, res, "PUT", `${dynastyPath(req)}/status`, staffActorHeaders(req), "set script dynasty status"));
 
-router.post("/scripts/dynasty/:outcome/:dynasty/replay", authenticate, requireOrg, requireUser, requireStaffActor, (req: AuthenticatedRequest, res) =>
+router.post("/scripts/dynasty/:outcome/:dynasty/replay", authenticate, requireOrg, requireUser, markCodeBearing, requireStaffActor, (req: AuthenticatedRequest, res) =>
   pipe(req, res, "POST", `${dynastyPath(req)}/replay`, staffActorHeaders(req), "replay script"));
 
 export default router;
