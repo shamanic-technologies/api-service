@@ -5113,6 +5113,51 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{id}/offers/{offerId}",
+  tags: ["Brand"],
+  summary: "Rename an offer or edit its description",
+  description:
+    "Proxy to brand-service PATCH /orgs/brands/{brandId}/offers/{offerId}. Rename an offer, or change / edit / rewrite / " +
+    "clear its description, so the offer card says who it is for now (for example rename \"Chiropractic Vendors\" to " +
+    "\"Healthcare Practice Vendors\" and update the description to match). Partial update: send `name`, `description`, " +
+    "or both; an omitted field keeps its stored value; `description: null` or blank removes the description. At least " +
+    "one field is required. Answers { offer } with the updated offer. Body forwarded verbatim; status and body owned by " +
+    "brand-service.",
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              name: z.string().min(1).max(60).optional().describe("New offer name (1-60 characters). Unique per brand: 409 if another offer of this brand already has it."),
+              description: z
+                .string()
+                .max(500)
+                .nullable()
+                .optional()
+                .describe("New offer description (at most 500 characters): who the offer is for and what it sells. null or blank = no description."),
+            })
+            .passthrough()
+            .openapi("UpdateBrandOfferRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "The updated offer: { offer }", content: { "application/json": { schema: z.object({}).passthrough().openapi("UpdateBrandOfferResponse") } } },
+    400: { description: "Invalid body: no field sent, blank name, or description longer than 500 characters (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+    409: { description: "Another offer on this brand already has that name (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // Brand – Offer documents (proxy to brand-service /orgs/brands/:id/offers/:offerId/documents[/:documentId]).
 // Files the client owns about one offer, which the AI responder can attach when a prospect replies.
