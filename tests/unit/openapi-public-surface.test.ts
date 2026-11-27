@@ -222,6 +222,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/crm/ops/trigger-reports",
   "get /v1/crm/ops/connector-intake",
     "get /v1/transactional-email/ops/monitoring-alerts",
+  "get /v1/keys/ops/security-daily",
   "get /v1/apollo/ops/email-sources/daily",
   "get /v1/campaigns/ops/stuck-occurrences",
   "get /v1/campaigns/ops/trigger-health",

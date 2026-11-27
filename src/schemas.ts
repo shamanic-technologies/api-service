@@ -12673,6 +12673,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/keys/ops/security-daily",
+  tags: ["Key Security Ops"],
+  summary: "Get key-service's daily secret reads/writes, wrong-key requests and security incidents (staff only)",
+  description:
+    "Powers the Secrets source of dashboard v2 Monitoring (SECURITY-ALERTS-1128-CHART): per UTC day the secrets "
+    + "read, keys written, requests with a wrong service key and security incidents opened, the served red verdict "
+    + "and the recent incidents. Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to key-service GET /internal/security/daily. The query string is forwarded "
+    + "verbatim; a bad `days` answers the producer's own 400. Response owned by key-service (its `SecurityDailyResponse`).",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Window in days (1-90, default 30); key-service owns the default and bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Security series — pass-through from key-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("KeySecurityOpsDailyResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/transactional-email/ops/monitoring-alerts",
   tags: ["Transactional Email Ops"],
   summary: "Get the staff monitoring alerts transactional-email-service recorded instead of emailing them (staff only)",
