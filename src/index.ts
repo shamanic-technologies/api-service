@@ -92,6 +92,8 @@ import costsStaffRoutes from "./routes/costs-staff.js";
 import socialRoutes from "./routes/social.js";
 import adminRoutes from "./routes/admin.js";
 import { refuseTraversalPaths } from "./middleware/path-guard.js";
+import { securityWatch } from "./lib/security-watch.js";
+import { startAuditMaintenance } from "./lib/security-audit-store.js";
 import { refuseForwardedIdentity } from "./middleware/server-to-server.js";
 import adminBrandsRoutes from "./routes/admin-brands.js";
 import agentSignupsRoutes from "./routes/agent-signups.js";
@@ -121,7 +123,12 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Path-traversal guard FIRST (SECRETS-ROTATE-1127): a `..`, a backslash or an encoded
+// Security watch before everything (SECURITY-ALERTS-1128): reads each request on
+// `finish` (traversal attempts included), raises one staff `security_alert` email per
+// incident and writes the 90-day audit trail. Never slows or fails a request.
+app.use(securityWatch);
+
+// Path-traversal guard next (SECRETS-ROTATE-1127): a `..`, a backslash or an encoded
 // slash in the path is refused 400 before any router, in every spelling.
 app.use(refuseTraversalPaths);
 
@@ -423,6 +430,7 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 // Listen on :: for Railway private networking (IPv4 & IPv6 support)
 const server = app.listen(Number(PORT), "::", () => {
   console.log(`API Gateway running on port ${PORT}`);
+  if (!process.env.VITEST) startAuditMaintenance();
 });
 
 // ── HTTP timeouts ────────────────────────────────────────────────────────────
