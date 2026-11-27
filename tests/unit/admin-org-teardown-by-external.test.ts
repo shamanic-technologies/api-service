@@ -11,6 +11,9 @@ vi.mock("../../src/middleware/auth.js", async (importOriginal) => {
 import adminRoutes from "../../src/routes/admin.js";
 
 const VALID_API_KEY = "test-admin-distribute-key";
+
+// SECRETS-ROTATE-1127: /internal/admin/* and staff routes need a pinned staff human.
+const STAFF_HUMAN = { "x-email": "kevin@distribute.you", "x-external-user-id": "user_2yaCEpxeoOEIfXTdxTMY8pM8jXW" };
 const EXTERNAL_ORG_ID = "org_clerk_external_456";
 
 function createApp() {
@@ -52,7 +55,7 @@ describe("DELETE /internal/admin/orgs/by-external/:externalOrgId", () => {
     const app = createApp();
     await request(app)
       .delete(`/internal/admin/orgs/by-external/${EXTERNAL_ORG_ID}`)
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(capturedUrl).toContain(`/internal/orgs/by-external/${EXTERNAL_ORG_ID}`);
     expect(capturedInit?.method).toBe("DELETE");
@@ -62,7 +65,7 @@ describe("DELETE /internal/admin/orgs/by-external/:externalOrgId", () => {
     const app = createApp();
     const res = await request(app)
       .delete(`/internal/admin/orgs/by-external/${EXTERNAL_ORG_ID}`)
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(downstreamBody);
@@ -72,7 +75,7 @@ describe("DELETE /internal/admin/orgs/by-external/:externalOrgId", () => {
     const app = createApp();
     await request(app)
       .delete(`/internal/admin/orgs/by-external/${EXTERNAL_ORG_ID}`)
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     const headers = capturedInit?.headers as Record<string, string>;
     expect(headers["X-API-Key"]).toBeDefined();
@@ -104,7 +107,7 @@ describe("DELETE /internal/admin/orgs/by-external/:externalOrgId", () => {
     const app = createApp();
     const res = await request(app)
       .delete(`/internal/admin/orgs/by-external/${EXTERNAL_ORG_ID}`)
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toContain("org not found");
@@ -120,7 +123,7 @@ describe("DELETE /internal/admin/orgs/by-external/:externalOrgId", () => {
     const app = createApp();
     const res = await request(app)
       .delete(`/internal/admin/orgs/by-external/${EXTERNAL_ORG_ID}`)
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(500);
     expect(res.body.error).toContain("Clerk user deletion failed");
