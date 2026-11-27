@@ -29,6 +29,7 @@ import brandAudienceRoutes from "./routes/brand-audience.js";
 import crmRoutes from "./routes/crm.js";
 import crmOpsRoutes from "./routes/crm-ops.js";
 import transactionalEmailOpsRoutes from "./routes/transactional-email-ops.js";
+import keySecurityOpsRoutes from "./routes/key-security-ops.js";
 import apolloOpsRoutes from "./routes/apollo-ops.js";
 import campaignOpsRoutes from "./routes/campaign-ops.js";
 import googleRoutes from "./routes/google.js";
@@ -364,6 +365,7 @@ app.use("/v1", brandRoutes);
 app.use("/v1", crmRoutes);
 app.use("/v1", crmOpsRoutes);
 app.use("/v1", transactionalEmailOpsRoutes); // transactional-email-service /internal/monitoring-alerts (staff, SIGNUP-EMAILS-1111)
+app.use("/v1", keySecurityOpsRoutes); // key-service /internal/security/daily (staff, SECURITY-ALERTS-1128-CHART)
 app.use("/v1", apolloOpsRoutes); // apollo-service /internal/stats/email-sources/daily (staff, APOLLO-ZERO-COST-1119)
 app.use("/v1", googleRoutes);
 app.use("/v1", threadsRoutes);
