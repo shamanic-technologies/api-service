@@ -5,6 +5,7 @@ import { isStaffEmail, isStaffHuman } from "./staff.js";
 import { callExternalService, externalServices } from "./service-client.js";
 import { recordAudit, type AuditRow } from "./security-audit-store.js";
 import { keyFingerprint } from "./call-log.js";
+import { ownActorReason, resetOwnActorsCache } from "./own-actors.js";
 
 /**
  * Gateway intrusion alerts + audit trail (SECURITY-ALERTS-1128, owner 2026-11-28).
@@ -35,6 +36,10 @@ import { keyFingerprint } from "./call-log.js";
  *  - `platform_key_guess`: PLATFORM_KEY_GUESSES wrong `x-api-key` values from one IP in 10 minutes.
  *  - `audit_store_unavailable`: an audit row could not be written.
  * Staff never alert on their own actions (a staff key user, a staff x-email, a pinned staff human).
+ * Nor does any actor that is provably us (`own-actors.ts`, SECURITY-OWN-ACTORS-1128: the box itself
+ * relaying nobody, an address that logged into the box with our SSH key in the last 24 h, a pinned
+ * staff test account): the detection is audited as `own_<kind>`, never emailed, and never consumes
+ * the day's alert for that subject, so an outsider on the same subject still alerts.
  */
 
 export type SecurityKind =
@@ -111,9 +116,15 @@ export function setAlertSender(next: AlertSender): void {
 }
 
 const raised = new Map<string, number>();
+/** Own-actor detections already audited today (bursts are audited once per incident, like alerts). */
+const ownNoted = new Map<string, number>();
 
 export function utcDay(now: number): string {
   return new Date(now).toISOString().slice(0, 10);
+}
+
+function eventIdOf(kind: SecurityKind, subject: string, now: number): string {
+  return `api-service:${kind}:${subject}:${utcDay(now)}`.slice(0, 200);
 }
 
 /**
@@ -127,7 +138,7 @@ export function raiseAlert(
   evidence: string[],
   now: number = Date.now(),
 ): SecurityAlert | null {
-  const eventId = `api-service:${kind}:${subject}:${utcDay(now)}`.slice(0, 200);
+  const eventId = eventIdOf(kind, subject, now);
   if (raised.has(eventId)) return null;
   raised.set(eventId, now);
   if (raised.size > 5_000) {
@@ -184,6 +195,8 @@ const keyGuesses = new WindowCounter<string>(PLATFORM_KEY_GUESS_WINDOW_MS);
 /** Tests only. */
 export function resetSecurityWatch(): void {
   raised.clear();
+  ownNoted.clear();
+  resetOwnActorsCache();
   probe4xx.clear();
   keyMints.clear();
   keyGuesses.clear();
@@ -303,8 +316,24 @@ export function observe(req: WatchedRequest, status: number, now: number): void 
       ...extra,
     });
 
+  const own = ownActorReason({ ip, userId: req.userId, authType: req.authType, headers: req.headers, isBoxPublicIp: isTrustedSourceIp }, now);
+
   // A per-request detection (one hostile request) is audited every time; a burst only when it alerts.
+  // An actor that is provably us is audited as `own_<kind>` and never emailed (SECURITY-OWN-ACTORS-1128).
   const detect = (kind: SecurityKind, subject: string, summary: string, extra: string[] = [], perRequest = true) => {
+    if (own) {
+      const id = eventIdOf(kind, subject, now);
+      const first = !ownNoted.has(id);
+      if (first) {
+        ownNoted.set(id, now);
+        if (ownNoted.size > 5_000) {
+          for (const [key, at] of ownNoted) if (now - at > 36 * 3_600_000) ownNoted.delete(key);
+        }
+        console.log(`[security-alert] not sent, actor is us (${own}): ${kind} ${subject}: ${summary}`);
+      }
+      if (perRequest || first) audit(`own_${kind}`);
+      return;
+    }
     const alert = raiseAlert(kind, subject, summary, [...baseEvidence, ...extra], now);
     if (perRequest || alert) audit(kind);
   };
