@@ -425,6 +425,11 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
   "PUT /v1/orgs/{orgId}/membership-limit",
   "PUT /v1/billing/accounts/topup_minimums",
   "PATCH /v1/strategies/{id}",
+  // CATALOGUE-GATE-1127: the fleet-wide catalogue (tactics are judged on every workflow) is written by staff only.
+  "POST /v1/tactics",
+  "PATCH /v1/tactics/{id}",
+  "POST /v1/strategies",
+  "POST /v1/plays",
   "POST /v1/catalogue/pipes",
   "POST /v1/catalogue/steps",
   "POST /v1/declarations/channels",
