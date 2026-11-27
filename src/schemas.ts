@@ -5174,9 +5174,9 @@ const OFFER_DOCUMENTS_MODEL =
   "(a) when you reply yourself with `POST /v1/replies` and list it in `attachments` [{ document_id }], or (b) by a " +
   "WORKFLOW that attaches offer documents, reading this list (fileName + description) to pick the file that helps. " +
   "Which workflow a campaign's pipe runs is chosen by its PLAY, not by you directly: to make a campaign's AI meeting " +
-  "booking replies carry an attachment, find (`GET /v1/tactics?q=attach`) or create (`POST /v1/tactics`) a tactic " +
-  "describing that attachment behaviour, a strategy requiring it (`POST /v1/strategies`), add it as a play on the " +
-  "pipe `ai-meeting-booking|conversation_to_meeting_booked` (`POST /v1/plays`), then pick a sales funnel running that " +
+  "booking replies carry an attachment, find a tactic describing that attachment behaviour (`GET /v1/tactics?q=attach`), " +
+  "a strategy requiring it (`GET /v1/strategies`) and its play on the pipe `ai-meeting-booking|conversation_to_meeting_booked` " +
+  "(`GET /v1/plays?pipe=...`; none yet = ask us with `POST /v1/staff-requests`, only staff create them), then pick a sales funnel running that " +
   "play (`GET /v1/offers/{offerId}/sales-funnels`, its id carries `@ai-meeting-booking~<strategy id>`) and launch it " +
   "with `POST /v1/sales-funnel-campaigns`. Write each description as when the file helps a prospect. " +
   "Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file " +
@@ -9946,22 +9946,22 @@ registry.registerPath({
   },
 });
 
-// Tactics, strategies and plays — shared catalogue, any authenticated caller (src/routes/plays.ts)
+// Tactics, strategies and plays — shared catalogue, read by any authenticated caller, written by staff only (src/routes/plays.ts, CATALOGUE-GATE-1127)
 const PLAYS_MODEL =
   "A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). " +
   "A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". " +
   "A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. " +
   "Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. " +
-  "This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. " +
+  "This catalogue is shared by every client and only distribute.you staff write it (creating or editing a tactic, strategy or play is staff only: a client key gets 403 `staff_only`). " +
   "It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): " +
-  "(1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); " +
-  "(3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); " +
+  "(1) find the tactic naming the behaviour (`GET /v1/tactics?q=...`); (2) a strategy requiring it (`GET /v1/strategies`); " +
+  "(3) a play = that strategy on the pipe that should behave so (`GET /v1/plays?pipe=...`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); none fits = ask us with `POST /v1/staff-requests`; " +
   "(4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play " +
   "and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, " +
   "create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. " +
   "A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). " +
   "A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. " +
-  "Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run.";
+  "Every write (`POST /v1/tactics`, `PATCH /v1/tactics/{id}`, `POST /v1/strategies`, `PATCH /v1/strategies/{id}`, `POST /v1/plays`) is staff only, because it changes what every client's campaigns run and a tactic is judged on every workflow.";
 const CATALOGUE_READ_GATE =
   "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it too. Read only: every write keeps its own gate. ";
 const playsCommon = (s: string) => `${s} ${PLAYS_MODEL} Byte passthrough to features-service; status and body (including 400/404/409 with a named \`reason\`) owned by it.`;
@@ -9989,27 +9989,27 @@ registry.registerPath({
   responses: { 200: playsOk("TacticDetailResponse"), 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
 registry.registerPath({
-  method: "post", path: "/v1/tactics", tags: ["Plays"], security: authed,
-  summary: "Create a tactic",
-  description: playsCommon("Declare a new tactic. Every workflow version is then judged on its description within minutes, so describe precisely what a workflow DOES, not what it is called. Name and description must be unique (409 `tactic_name_taken` / `tactic_description_taken`); the id is the name slugged. The author is recorded from your API key; any `createdBy` you send is replaced."),
+  method: "post", path: "/v1/tactics", tags: ["Plays"], security: platformAuth,
+  summary: "Create a tactic (staff only)",
+  description: playsCommon("Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only` (CATALOGUE-GATE-1127). Declare a new tactic. Every workflow version is then judged on its description within minutes, so describe precisely what a workflow DOES, not what it is called. Name and description must be unique (409 `tactic_name_taken` / `tactic_description_taken`); the id is the name slugged. The author is recorded as the authenticated staff email; any `createdBy` you send is replaced."),
   request: { body: { content: { "application/json": { schema: z.object({
     name: z.string().min(1).max(60).openapi({ description: "Short unique name, e.g. `Catch-all` (1 to 60 characters, else 400 `name_required` / `name_too_long`)" }),
     description: z.string().min(1).max(500).openapi({ description: "Unique, precise: what a workflow following it does (1 to 500 characters, else 400 `description_required` / `description_too_long`)" }),
   }).passthrough().openapi("CreateTacticRequest") } } } },
-  responses: { 201: playsOk("CreateTacticResponse"), 409: { description: "Name or description taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
+  responses: { 201: playsOk("CreateTacticResponse"), 403: { description: "Not staff (`staff_only`)", content: errorContent }, 409: { description: "Name or description taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
 
 registry.registerPath({
-  method: "patch", path: "/v1/tactics/{id}", tags: ["Plays"], security: authed,
-  summary: "Edit a tactic's description",
-  description: playsCommon("Replace a tactic's description. Editing re-judges every workflow version on the new words within minutes; the old verdicts keep serving until each is replaced. The description must stay unique (409 `tactic_description_taken`) and at most 500 characters (400 `description_too_long`); an unknown tactic is 404 `tactic_not_found`. The answer carries the tactic, `changed`, `previousDescription`, `updatedBy` and `updatedAt`. The editor is recorded from your API key; any `updatedBy` you send is replaced."),
+  method: "patch", path: "/v1/tactics/{id}", tags: ["Plays"], security: platformAuth,
+  summary: "Edit a tactic's description (staff only)",
+  description: playsCommon("Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only` (CATALOGUE-GATE-1127). Replace a tactic's description. Editing re-judges every workflow version on the new words within minutes; the old verdicts keep serving until each is replaced. The description must stay unique (409 `tactic_description_taken`) and at most 500 characters (400 `description_too_long`); an unknown tactic is 404 `tactic_not_found`. The answer carries the tactic, `changed`, `previousDescription`, `updatedBy` and `updatedAt`. The editor is recorded as the authenticated staff email; any `updatedBy` you send is replaced."),
   request: {
     params: z.object({ id: z.string().openapi({ description: "A tactic id (its name slugged, e.g. `catch-all`)" }) }),
     body: { content: { "application/json": { schema: z.object({
       description: z.string().min(1).max(500).openapi({ description: "The new description, unique, at most 500 characters: what a workflow following the tactic does" }),
     }).passthrough().openapi("EditTacticRequest") } } },
   },
-  responses: { 200: playsOk("EditTacticResponse"), 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, 409: { description: "Description taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
+  responses: { 200: playsOk("EditTacticResponse"), 403: { description: "Not staff (`staff_only`)", content: errorContent }, 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, 409: { description: "Description taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
 
 registry.registerPath({
@@ -10027,16 +10027,16 @@ registry.registerPath({
   responses: { 200: playsOk("StrategyDetailResponse"), 404: { description: "Unknown strategy (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
 registry.registerPath({
-  method: "post", path: "/v1/strategies", tags: ["Plays"], security: authed,
-  summary: "Create a strategy",
-  description: playsCommon("Declare a new strategy over existing tactics (at least one tactic in `requires` or `excludes`, never the same tactic in both). Name and description must be unique (409 `strategy_name_taken` / `strategy_description_taken`); a strategy with the same rule as an existing one is 409 `strategy_rule_taken` (use that one); an unknown tactic is 404 `tactic_not_found`. Then add it to a pipe with `POST /v1/plays`. The author is recorded from your API key; any `createdBy` you send is replaced."),
+  method: "post", path: "/v1/strategies", tags: ["Plays"], security: platformAuth,
+  summary: "Create a strategy (staff only)",
+  description: playsCommon("Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only` (CATALOGUE-GATE-1127). Declare a new strategy over existing tactics (at least one tactic in `requires` or `excludes`, never the same tactic in both). Name and description must be unique (409 `strategy_name_taken` / `strategy_description_taken`); a strategy with the same rule as an existing one is 409 `strategy_rule_taken` (use that one); an unknown tactic is 404 `tactic_not_found`. Then add it to a pipe with `POST /v1/plays`. The author is recorded as the authenticated staff email; any `createdBy` you send is replaced."),
   request: { body: { content: { "application/json": { schema: z.object({
     name: z.string().min(1).max(60).openapi({ description: "Unique name, e.g. `Valid + Catch-all` (1 to 60 characters, else 400 `name_required` / `name_too_long`)" }),
     description: z.string().min(1).max(500).openapi({ description: "Unique description of what the strategy allows (1 to 500 characters, else 400 `description_required` / `description_too_long`)" }),
     requires: z.array(z.string()).optional().openapi({ description: "Tactic ids a workflow must follow" }),
     excludes: z.array(z.string()).optional().openapi({ description: "Tactic ids a workflow must not follow" }),
   }).passthrough().openapi("CreateStrategyRequest") } } } },
-  responses: { 201: playsOk("CreateStrategyResponse"), 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, 409: { description: "Name, description or rule taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
+  responses: { 201: playsOk("CreateStrategyResponse"), 403: { description: "Not staff (`staff_only`)", content: errorContent }, 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, 409: { description: "Name, description or rule taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
 
 registry.registerPath({
@@ -10075,14 +10075,14 @@ registry.registerPath({
   responses: { 200: playsOk("PlayDetailResponse"), 404: { description: "Unknown play (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
 registry.registerPath({
-  method: "post", path: "/v1/plays", tags: ["Plays"], security: authed,
-  summary: "Add a play to a pipe",
-  description: playsCommon("Add an existing strategy to a pipe as a new play, so campaigns on that pipe can run it (for example strategy `valid-catch-all` on pipe `sales-cold-email-outreach|lead_found_to_website_visit`). Idempotent: a play that already exists answers 200 with `created: false`; a new one 201. Unknown pipe or strategy is a 404 `*_not_found`. The author is recorded from your API key; any `createdBy` you send is replaced."),
+  method: "post", path: "/v1/plays", tags: ["Plays"], security: platformAuth,
+  summary: "Add a play to a pipe (staff only)",
+  description: playsCommon("Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only` (CATALOGUE-GATE-1127). Add an existing strategy to a pipe as a new play, so campaigns on that pipe can run it (for example strategy `valid-catch-all` on pipe `sales-cold-email-outreach|lead_found_to_website_visit`). Idempotent: a play that already exists answers 200 with `created: false`; a new one 201. Unknown pipe or strategy is a 404 `*_not_found`. The author is recorded as the authenticated staff email; any `createdBy` you send is replaced."),
   request: { body: { content: { "application/json": { schema: z.object({
     pipeId: z.string().min(1).max(200).openapi({ description: "Pipe id, `<channel slug>|<leg key>` (at most 200 characters)" }),
     strategyId: z.string().min(1).max(100).openapi({ description: "Strategy id (GET /v1/strategies, at most 100 characters)" }),
   }).passthrough().openapi("CreatePlayRequest") } } } },
-  responses: { 200: playsOk("PlayAlreadyExistsResponse"), 201: playsOk("CreatePlayResponse"), 404: { description: "Unknown pipe or strategy (forwarded verbatim)", content: errorContent }, ...playsErrors },
+  responses: { 200: playsOk("PlayAlreadyExistsResponse"), 201: playsOk("CreatePlayResponse"), 403: { description: "Not staff (`staff_only`)", content: errorContent }, 404: { description: "Unknown pipe or strategy (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
 
 // Agent catalogue (staff) — features-service /internal/catalogue/* (PR #1482)
