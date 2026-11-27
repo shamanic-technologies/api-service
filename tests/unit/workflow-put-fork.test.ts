@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
+import { buildDocument } from "../../src/openapi/document.js";
 
 describe("PUT /workflows/:id — fork/conflict support", () => {
   const routePath = path.join(__dirname, "../../src/routes/workflows.ts");
@@ -69,8 +70,8 @@ describe("PUT /workflows/{id} OpenAPI spec — fork/conflict responses", () => {
 });
 
 describe("Generated openapi.json reflects fork/conflict changes", () => {
-  const openapiPath = path.join(__dirname, "../../openapi.json");
-  const spec = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
+  // PUT /v1/workflows/{id} is staff only since RCE-WORKFLOWS-1127: read the staff-key document.
+  const spec = buildDocument({ audience: "staff-key" }) as any;
   const putEndpoint = spec.paths["/v1/workflows/{id}"]?.put;
   // Plain error answers are shared `$ref`s to components.responses (declared once).
   const putResponses = Object.fromEntries(

@@ -8,6 +8,23 @@ import { invalidRequestBody } from "../lib/invalid-request.js";
 
 const router = Router();
 
+/**
+ * RCE-WORKFLOWS-1127 (security hotfix 2026-11-27): a workflow DAG is CODE. Its `script`
+ * nodes run on our Windmill workers, so whoever writes a DAG runs code on our
+ * infrastructure. On 2026-11-20 a self-signed-up org used its user key on
+ * `POST /v1/workflows` (112 calls, `child_process` in a script node) and read every
+ * production secret back through `GET /v1/workflow-runs/:id`.
+ *
+ * Every route that creates, changes, forks, generates or RUNS a workflow is therefore
+ * STAFF ONLY (`requireStaffActor`, listed in `STAFF_KEY_OPERATIONS`): a pinned staff
+ * user's own key, or the platform key with a staff `x-email` (the admin console). A
+ * client key gets 403 `staff_only`; the platform key relaying a customer browser session
+ * (non-staff or no `x-email`) gets 403 `Staff access required`. Nothing is sent to
+ * workflow-service before the gate. Our own servers write workflows on workflow-service
+ * directly, never through this gateway. Reads, `validate` and run `cancel` stay open.
+ * Pinned by `tests/unit/workflows-rce-gate.behavior.test.ts`.
+ */
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -257,7 +274,7 @@ router.get("/workflows/summaries", authenticate, requireOrg, requireUser, async 
  * POST /v1/workflows
  * Create a new workflow
  */
-router.post("/workflows", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.workflow,
@@ -517,7 +534,7 @@ router.post("/workflows/:id/prompt-edit", authenticate, requireOrg, requireUser,
  * caller with the producer's status and body. The body is not validated here —
  * workflow-service owns `{ changes, description?, tags? }`.
  */
-router.post("/workflows/dynasty/:workflowDynastySlug/fork", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/dynasty/:workflowDynastySlug/fork", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     await pipeExternalService(
       externalServices.workflow,
@@ -531,7 +548,7 @@ router.post("/workflows/dynasty/:workflowDynastySlug/fork", authenticate, requir
   }
 });
 
-router.post("/workflows/:id/fork", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/:id/fork", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
@@ -661,7 +678,7 @@ router.put("/workflows/:id/status", authenticate, requireOrg, requireUser, requi
  * PUT /v1/workflows/:id
  * Update a workflow (name, description, tags, dag)
  */
-router.put("/workflows/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.put("/workflows/:id", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
@@ -723,7 +740,7 @@ router.get("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
  * POST /v1/workflows/:id/execute
  * Execute a workflow by ID
  */
-router.post("/workflows/:id/execute", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/:id/execute", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
@@ -818,7 +835,7 @@ router.post("/workflow-runs/:id/cancel", authenticate, requireOrg, requireUser, 
  * POST /v1/workflows/create
  * Create a new workflow dynasty from natural language via workflow-service
  */
-router.post("/workflows/create", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/create", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = CreateWorkflowRequestSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -856,7 +873,7 @@ router.post("/workflows/create", authenticate, requireOrg, requireUser, async (r
  * POST /v1/workflows/upgrade
  * Upgrade an existing workflow within its dynasty via workflow-service
  */
-router.post("/workflows/upgrade", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/upgrade", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = UpgradeWorkflowRequestSchema.safeParse(req.body);
     if (!parsed.success) {
