@@ -125,6 +125,34 @@ router.get(
   },
 );
 
+// GET /v1/billing/special-offers — what each special offer (Black Friday 2026 first)
+// brought this org: what it paid under the offer and the free credit it earned.
+//
+// Same auth tier as the org's own grants ledger and free-credit promises above:
+// billing-service scopes the response to the caller's x-org-id, so an org reads only its
+// own offers and the client never names an org. Billing's staff routes for special offers
+// (create an offer, apply it to a payment) are deliberately NOT proxied.
+//
+// Transparent passthrough: billing's money figures (decimal cents strings) are forwarded
+// as they are, never reshaped or recomputed here.
+router.get(
+  "/billing/special-offers",
+  authenticate,
+  requireOrg,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        "/v1/special-offers",
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: unknown) {
+      respondUpstreamError(res, error, "Failed to get special offers");
+    }
+  },
+);
+
 // POST /v1/billing/credits/debit — take credit OFF the org in context, with a note (staff
 // only). The mirror of the grant. Body { amountCents, note, idempotencyKey } forwarded as-is
 // to billing-service POST /v1/credits/debit (which owns validation, requires the staff
