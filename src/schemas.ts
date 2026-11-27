@@ -8733,6 +8733,28 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/billing/special-offers",
+  tags: ["Billing"],
+  summary: "What each special offer brought this org",
+  description:
+    "For the client's billing page. Per special offer the org has a payment under (Black Friday " +
+    "2026 first): its name and dates, the payments made under it and the free credit they earned, " +
+    "with ready-made totals (paid_cents, free_credit_cents, decimal cents strings). Empty list when " +
+    "the org has none. Normal org auth (same tier as GET /v1/billing/credits/grants); " +
+    "billing-service scopes the response to the caller's x-org-id, so an org reads only its own " +
+    "offers and the client never names an org. Transparent proxy to billing-service " +
+    "GET /v1/special-offers; response owned by the downstream service.",
+  security: authed,
+  responses: {
+    200: { description: "The org's special offers — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("SpecialOffersResponse") } } },
+    400: { description: "Missing org context", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/billing/credits/grants/all",
   tags: ["Billing"],
   summary: "Get the platform-wide credit-grants ledger (staff only)",

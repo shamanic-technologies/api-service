@@ -160,6 +160,7 @@ export const DOWNSTREAM_RESPONSE_SOURCES: Record<string, DownstreamResponseSourc
   "POST /v1/billing/accounts/pay_balance": { service: "billing-service", method: "POST", path: "/v1/accounts/pay_balance" },
   "GET /v1/billing/credits/grants": { service: "billing-service", method: "GET", path: "/v1/credits/grants" },
   "GET /v1/billing/free-credit-promises": { service: "billing-service", method: "GET", path: "/v1/free-credit-promises" },
+  "GET /v1/billing/special-offers": { service: "billing-service", method: "GET", path: "/v1/special-offers" },
   "GET /v1/billing/credits/debits": { service: "billing-service", method: "GET", path: "/v1/credits/debits" },
   "GET /v1/billing/accounts/payment_mode": { service: "billing-service", method: "GET", path: "/v1/accounts/payment_mode" },
   "PUT /v1/billing/accounts/payment_mode": { service: "billing-service", method: "PUT", path: "/v1/accounts/payment_mode" },

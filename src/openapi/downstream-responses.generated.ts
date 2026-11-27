@@ -5232,6 +5232,101 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/billing/special-offers": {
+    "service": "billing-service",
+    "method": "GET",
+    "path": "/v1/special-offers",
+    "responses": {
+      "200": {
+        "description": "The org's special offers, oldest first",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "org_id": {
+              "type": "string"
+            },
+            "special_offers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "starts_at": {
+                    "type": "string"
+                  },
+                  "ends_at": {
+                    "type": "string"
+                  },
+                  "paid_cents": {
+                    "type": "string"
+                  },
+                  "free_credit_cents": {
+                    "type": "string"
+                  },
+                  "payments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "payment_id": {
+                          "type": "string"
+                        },
+                        "acquirer": {
+                          "type": "string"
+                        },
+                        "paid_cents": {
+                          "type": "string"
+                        },
+                        "paid_at": {
+                          "type": "string"
+                        },
+                        "free_credit_cents": {
+                          "type": "string"
+                        },
+                        "grant_id": {
+                          "type": "string"
+                        },
+                        "applied_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "payment_id",
+                        "acquirer",
+                        "paid_cents",
+                        "paid_at",
+                        "free_credit_cents",
+                        "grant_id",
+                        "applied_at"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "slug",
+                  "name",
+                  "starts_at",
+                  "ends_at",
+                  "paid_cents",
+                  "free_credit_cents",
+                  "payments"
+                ]
+              }
+            }
+          },
+          "required": [
+            "org_id",
+            "special_offers"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/brands/{brandId}/audience-snapshot": {
     "service": "human-service",
     "method": "GET",
