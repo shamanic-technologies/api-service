@@ -16,8 +16,9 @@ const { WORKFLOW_BASE } = vi.hoisted(() => {
  * Drives the real router (real requireStaff, requireOrg, requireUser) with only
  * `authenticate` stubbed to an admin-keyed identity, and a stubbed fetch. Asserts:
  * the full downstream path, the identity forwarded, the body forwarded verbatim,
- * the producer's status + body returned byte-identical (201, 409, 422), and that a
- * NON-staff caller is served too (same access as PUT /v1/workflows/{id}).
+ * the producer's status + body returned byte-identical (201, 409, 422). Callers here are
+ * STAFF (RCE-WORKFLOWS-1127: a fork can change a DAG's code, so it is staff only; the
+ * refusal of non-staff callers is pinned in workflows-rce-gate.behavior.test.ts).
  *
  * The payloads below are fixtures, not a contract this repo owns (CLAUDE.md #6/#8).
  */
@@ -33,6 +34,9 @@ vi.mock("../../src/middleware/auth.js", async () => {
       req.orgId = "org_test456";
       req.runId = "run_test789";
       req.authType = req.headers["x-test-auth-type"] ?? "admin";
+      // Staff identity (RCE-WORKFLOWS-1127): a pinned staff key, or the admin console's staff x-email.
+      if (req.authType === "user_key") req.userKeyScope = { isStaff: true, email: "kevin@distribute.you", memberships: [] };
+      else req.headers["x-email"] ??= "kevin@distribute.you";
       next();
     },
   };

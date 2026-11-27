@@ -22,6 +22,8 @@ vi.mock("../../src/middleware/auth.js", async () => {
       req.orgId = "org_test456";
       req.runId = "run_test789";
       req.authType = "admin";
+      // The admin console's staff x-email (RCE-WORKFLOWS-1127: workflow writes are staff only).
+      req.headers["x-email"] ??= "kevin@distribute.you";
       next();
     },
   };
