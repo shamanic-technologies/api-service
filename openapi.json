@@ -3759,6 +3759,33 @@
           "nullable": true
         }
       },
+      "UpdateBrandOfferResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "UpdateBrandOfferRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60,
+            "description": "New offer name (1-60 characters). Unique per brand: 409 if another offer of this brand already has it."
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500,
+            "description": "New offer description (at most 500 characters): who the offer is for and what it sells. null or blank = no description."
+          }
+        },
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "OfferDocumentResponse": {
         "type": "object",
         "properties": {},
@@ -13745,6 +13772,26 @@
       },
       "ErrorResponse400InvalidBrandIDFormatForwardedVerbatim": {
         "description": "Invalid brand ID format (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidBodyNoFieldSentBlankNameOrDescriptionLongerThan500Cha": {
+        "description": "Invalid body: no field sent, blank name, or description longer than 500 characters (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409AnotherOfferOnThisBrandAlreadyHasThatNameForwardedVerbatim": {
+        "description": "Another offer on this brand already has that name (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
@@ -43479,6 +43526,92 @@
           }
         },
         "operationId": "getV1BrandsByIdOffersByOfferId"
+      },
+      "patch": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Rename an offer or edit its description",
+        "description": "Proxy to brand-service PATCH /orgs/brands/{brandId}/offers/{offerId}. Rename an offer, or change / edit / rewrite / clear its description, so the offer card says who it is for now (for example rename \"Chiropractic Vendors\" to \"Healthcare Practice Vendors\" and update the description to match). Partial update: send `name`, `description`, or both; an omitted field keeps its stored value; `description: null` or blank removes the description. At least one field is required. Answers { offer } with the updated offer. Body forwarded verbatim; status and body owned by brand-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Offer ID"
+            },
+            "required": true,
+            "description": "Offer ID",
+            "name": "offerId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBrandOfferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated offer: { offer }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateBrandOfferResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidBodyNoFieldSentBlankNameOrDescriptionLongerThan500Cha"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse403BrandDoesNotBelongToTheCallerSOrgForwardedVerbatim"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoSuchBrandOrNoSuchOfferOnItForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409AnotherOfferOnThisBrandAlreadyHasThatNameForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500UpstreamError"
+          }
+        },
+        "operationId": "patchV1BrandsByIdOffersByOfferId"
       }
     },
     "/v1/brands/{id}/offers/{offerId}/documents": {
