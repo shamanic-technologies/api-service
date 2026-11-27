@@ -131,7 +131,7 @@ describe("/internal/admin/*", () => {
   });
 
   it("no key at all alerts too (401), case-folded paths included", async () => {
-    const res = await request(app()).get("/INTERNAL/admin/services");
+    const res = await request(app()).get("/INTERNAL/admin/services").set(EDGE("203.0.113.12"));
     expect(res.status).toBe(401);
     await settle();
     expect(alerts.map((a) => a.kind)).toEqual(["admin_not_staff_human"]);
