@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticatePlatform, AuthenticatedRequest } from "../middleware/auth.js";
+import { refuseForwardedIdentity } from "../middleware/server-to-server.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { PlatformChatConfigRequestSchema } from "../schemas.js";
 import { invalidRequestBody } from "../lib/invalid-request.js";
@@ -12,7 +13,7 @@ const router = Router();
  * Authenticated by X-API-Key (ADMIN_DISTRIBUTE_API_KEY) only.
  * Used by the dashboard at cold start when no Clerk session exists.
  */
-router.put("/config", authenticatePlatform, async (req: AuthenticatedRequest, res) => {
+router.put("/config", authenticatePlatform, refuseForwardedIdentity, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = PlatformChatConfigRequestSchema.safeParse(req.body);
     if (!parsed.success) {

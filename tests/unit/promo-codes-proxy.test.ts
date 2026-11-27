@@ -14,6 +14,9 @@ import promoCodesRoutes from "../../src/routes/promo-codes.js";
 
 const VALID_API_KEY = "test-admin-distribute-key";
 
+// SECRETS-ROTATE-1127: /internal/admin/* and staff routes need a pinned staff human.
+const STAFF_HUMAN = { "x-email": "kevin@distribute.you", "x-external-user-id": "user_2yaCEpxeoOEIfXTdxTMY8pM8jXW" };
+
 function createApp() {
   const app = express();
   app.use(express.json());
@@ -33,7 +36,7 @@ describe("GET /v1/promo-codes/:code", () => {
 
     const res = await request(createApp())
       .get("/v1/promo-codes/welcome")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(upstream);
@@ -60,7 +63,7 @@ describe("GET /v1/promo-codes/:code", () => {
 
     const res = await request(createApp())
       .get("/v1/promo-codes/nope")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(404);
   });
@@ -73,7 +76,7 @@ describe("PATCH /v1/promo-codes/:code", () => {
 
     const res = await request(createApp())
       .patch("/v1/promo-codes/welcome")
-      .set("X-API-Key", VALID_API_KEY)
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN)
       .send({ amountCents: 2500 });
 
     expect(res.status).toBe(200);
@@ -111,7 +114,7 @@ describe("PATCH /v1/promo-codes/:code", () => {
 
     const res = await request(createApp())
       .patch("/v1/promo-codes/nope")
-      .set("X-API-Key", VALID_API_KEY)
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN)
       .send({ amountCents: 100 });
 
     expect(res.status).toBe(404);

@@ -437,9 +437,10 @@ router.get("/events", authenticate, requireOrg, requireUser, async (req: Authent
 
 /**
  * GET /v1/runs/:id/events
- * List events for a specific run. Admin-only.
+ * List events for a specific run. Staff only (SECRETS-ROTATE-1127: any org's run by UUID,
+ * and the platform key alone is held by the customer dashboard proxy).
  */
-router.get("/runs/:id/events", authenticatePlatform, async (req: AuthenticatedRequest, res) => {
+router.get("/runs/:id/events", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.runs,
@@ -455,9 +456,9 @@ router.get("/runs/:id/events", authenticatePlatform, async (req: AuthenticatedRe
 
 /**
  * GET /v1/runs/:id/events/stream
- * SSE stream for run events. Admin-only.
+ * SSE stream for run events. Staff only (SECRETS-ROTATE-1127).
  */
-router.get("/runs/:id/events/stream", authenticatePlatform, async (req: AuthenticatedRequest, res) => {
+router.get("/runs/:id/events/stream", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
   try {
     await streamExternalService(externalServices.runs, `/v1/runs/${req.params.id}/events/stream`, {
       method: "GET",

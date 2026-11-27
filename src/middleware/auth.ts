@@ -4,7 +4,7 @@ import { callExternalService, externalServices } from "../lib/service-client.js"
 import { createRun, updateRun } from "@distribute/runs-client";
 import { supportFunctionFor } from "../lib/support-function.js";
 import { looksLikeUserKey, respondAuthFailure } from "../lib/auth-failure.js";
-import { isStaffEmail, staffEmailAllowlist } from "../lib/staff.js";
+import { isStaffEmail, isStaffHuman, staffEmailAllowlist } from "../lib/staff.js";
 import { loadUserKeyScope, resolveTargetOrg, respondTargetFailure, UserKeyScope } from "../lib/org-scope.js";
 
 /**
@@ -372,6 +372,56 @@ export function requireStaff(
     return res.status(403).json({ error: "Staff access required" });
   }
 
+  req.staffEmail = email;
+  return next();
+}
+
+/**
+ * Raw-data gate (SECRETS-ROTATE-1127, security hotfix 2026-11-27). MUST run after
+ * `authenticatePlatform`.
+ *
+ * On 2026-11-20/21, 740 tables of every service database were downloaded through the
+ * table browser (`/internal/admin/services/:name/tables/:table/rows`), gated by the
+ * platform key alone: once through the customer dashboard proxy (which injects the
+ * platform key for any signed-in customer) after a path traversal, once with the leaked
+ * key. The platform key is never proof of a human, and a staff `x-email` alone is a
+ * header anyone holding the key can type. So, ALL required, else a named 403:
+ *  1. platform key (`authType === "admin"`): a Bearer user key never reaches raw tables;
+ *  2. `x-email` on the staff allowlist;
+ *  3. `x-external-user-id` = the PINNED identity-provider user id of that same staff human
+ *     (`STAFF_EXTERNAL_USER_IDS`): our proxies stamp it from the verified session.
+ * A request with no human identity at all (a script holding the key) is refused too.
+ */
+export function requireStaffHuman(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  if (req.authType !== "admin") {
+    return res.status(403).json({
+      error: "Staff access required",
+      code: "staff_human_required",
+      message: "Raw service data is readable only by a distribute.you staff member signed in on our admin.",
+    });
+  }
+  const email = (req.headers["x-email"] as string | undefined)?.trim().toLowerCase();
+  const externalUserId = req.headers["x-external-user-id"] as string | undefined;
+  if (!email || !externalUserId) {
+    console.warn("[auth] requireStaffHuman blocked: no human identity", { path: req.path });
+    return res.status(403).json({
+      error: "Staff access required: this request carries no signed-in human identity",
+      code: "staff_human_required",
+      message: "Raw service data is readable only by a distribute.you staff member signed in on our admin.",
+    });
+  }
+  if (!isStaffHuman(externalUserId, email)) {
+    console.warn("[auth] requireStaffHuman blocked non-staff identity", { email, path: req.path });
+    return res.status(403).json({
+      error: "Staff access required",
+      code: "staff_human_required",
+      message: "Raw service data is readable only by a distribute.you staff member signed in on our admin.",
+    });
+  }
   req.staffEmail = email;
   return next();
 }

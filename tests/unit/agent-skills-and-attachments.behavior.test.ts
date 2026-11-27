@@ -98,6 +98,9 @@ describe("GET /v1/skills (agent skill tree, read-only)", () => {
 
 describe("published document: an agent can find the whole attachment setup", () => {
   const doc = buildDocument() as any;
+  // Catalogue writes (tactics, strategies, plays) are staff only (CATALOGUE-GATE-1127): the staff-key document carries them.
+  const staffDoc = buildDocument({ audience: "staff-key" }) as any;
+  const staffOp = (method: string, path: string) => staffDoc.paths[path]?.[method];
   const op = (method: string, path: string) => doc.paths[path]?.[method];
 
   it("lists the skill tree reads and a brand's offers", () => {
@@ -115,23 +118,26 @@ describe("published document: an agent can find the whole attachment setup", () 
     const text = op("post", "/v1/brands/{id}/offers/{offerId}/documents").description as string;
     expect(text).toContain("attachment");
     expect(text).toContain("POST /v1/replies");
-    expect(text).toContain("POST /v1/plays");
+    expect(text).toContain("GET /v1/plays");
+    expect(text).toContain("POST /v1/staff-requests");
+    expect(text).not.toContain("POST /v1/plays");
     expect(text).toContain("POST /v1/sales-funnel-campaigns");
     expect(text).not.toContain("The AI answering a prospect reads the list (fileName + description) to pick the one that helps and attaches it");
   });
 
   it("plays and sales funnel campaigns explain how to change a campaign's behaviour", () => {
-    expect(op("post", "/v1/plays").description).toContain("GET /v1/offers/{offerId}/sales-funnels");
+    expect(op("post", "/v1/plays")).toBeUndefined();
+    expect(staffOp("post", "/v1/plays").description).toContain("GET /v1/offers/{offerId}/sales-funnels");
     expect(op("post", "/v1/sales-funnel-campaigns").description).toContain("status: stopped");
     const plays = doc.tags.find((t: any) => t.name === "Plays");
     expect(plays.description).toContain("attachment");
   });
 
   it("tactics, strategies and plays creates publish the producer's length limits", () => {
-    const body = (m: string, p: string) => op(m, p).requestBody.content["application/json"].schema;
+    const body = (m: string, p: string) => staffOp(m, p).requestBody.content["application/json"].schema;
     const props = (m: string, p: string) => {
       const sc = body(m, p);
-      return (sc.$ref ? doc.components.schemas[sc.$ref.split("/").pop()] : sc).properties;
+      return (sc.$ref ? staffDoc.components.schemas[sc.$ref.split("/").pop()] : sc).properties;
     };
     expect(props("post", "/v1/tactics").name.maxLength).toBe(60);
     expect(props("post", "/v1/tactics").description.maxLength).toBe(500);
