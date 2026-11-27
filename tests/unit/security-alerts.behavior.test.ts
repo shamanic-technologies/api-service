@@ -299,3 +299,30 @@ function fakeReq(o: { method: string; url: string; authType?: "user_key" | "admi
     body: undefined,
   };
 }
+
+// SECURITY-ALERTS-OURS-1128: every alert is raised with its origin facts; transactional-email-service
+// decides whether it was caused by us (recorded, not emailed). Nothing is skipped here any more.
+describe("origin facts on every alert (SECURITY-ALERTS-OURS-1128)", () => {
+  it("a traversal from our staff Mac is raised with originIp, no local skip", async () => {
+    await request(app()).get("/v1/brands/..%2f..%2finternal/admin/x").set(EDGE("94.131.226.180"));
+    await settle();
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].origin).toEqual({ originIp: "94.131.226.180" });
+  });
+
+  it("a request from inside the box (no edge header) carries the TCP peer; a customer key is marked as relayed", async () => {
+    await request(app()).post("/v1/workflows").set({ "x-test-auth": "user_key", "x-test-user": "d0855655-d7a4-41b5-af49-e2dd357b60fe" }).send({});
+    await settle();
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].origin.originIp).toMatch(/127\.0\.0\.1/);
+    expect(alerts[0].origin).toMatchObject({ originRelays: "true", actorUserId: "d0855655-d7a4-41b5-af49-e2dd357b60fe" });
+  });
+
+  it("the same incident from another address is raised again (once per incident AND origin)", async () => {
+    await request(app()).get("/v1/brands/..%2fx").set(EDGE("94.131.226.180"));
+    await request(app()).get("/v1/brands/..%2fx").set(EDGE("94.131.226.180"));
+    await request(app()).get("/v1/brands/..%2fx").set(EDGE("195.178.110.132"));
+    await settle();
+    expect(alerts.map((a) => a.origin.originIp)).toEqual(["94.131.226.180", "195.178.110.132"]);
+  });
+});
