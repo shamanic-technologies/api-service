@@ -29,6 +29,9 @@ import adminRoutes from "../../src/routes/admin.js";
 
 const VALID_API_KEY = "test-admin-distribute-key";
 
+// SECRETS-ROTATE-1127: /internal/admin/* and staff routes need a pinned staff human.
+const STAFF_HUMAN = { "x-email": "kevin@distribute.you", "x-external-user-id": "user_2yaCEpxeoOEIfXTdxTMY8pM8jXW" };
+
 function createApp() {
   const app = express();
   app.use(express.json());
@@ -48,7 +51,7 @@ describe("GET /internal/admin/services", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(200);
     expect(res.body.services).toBeInstanceOf(Array);
@@ -82,7 +85,7 @@ describe("GET /internal/admin/services/:name/tables", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/brand-service/tables")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(200);
     expect(res.body.tables).toEqual([
@@ -95,7 +98,7 @@ describe("GET /internal/admin/services/:name/tables", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/nonexistent-service/tables")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toContain("not found");
@@ -115,7 +118,7 @@ describe("GET /internal/admin/services/:name/tables/:table/schema", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/brand-service/tables/brands/schema")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(200);
     expect(res.body.columns).toHaveLength(2);
@@ -139,7 +142,7 @@ describe("GET /internal/admin/services/:name/tables/:table/schema", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/brand-service/tables/nonexistent/schema")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toContain("not found");
@@ -149,7 +152,7 @@ describe("GET /internal/admin/services/:name/tables/:table/schema", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/nonexistent-service/tables/brands/schema")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(404);
   });
@@ -175,7 +178,7 @@ describe("GET /internal/admin/services/:name/tables/:table/rows", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/brand-service/tables/brands/rows?limit=10&offset=0")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(200);
     expect(res.body.rows).toHaveLength(1);
@@ -196,7 +199,7 @@ describe("GET /internal/admin/services/:name/tables/:table/rows", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/brand-service/tables/brands/rows?sort=id;DROP TABLE brands")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("Invalid sort column");
@@ -211,7 +214,7 @@ describe("GET /internal/admin/services/:name/tables/:table/rows", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/brand-service/tables/brands/rows?sort=id&order=INVALID")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("Invalid order");
@@ -223,7 +226,7 @@ describe("GET /internal/admin/services/:name/tables/:table/rows", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/brand-service/tables/nonexistent/rows")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(404);
   });
@@ -247,7 +250,7 @@ describe("GET /internal/admin/services/:name/tables/:table/rows", () => {
     const app = createApp();
     const res = await request(app)
       .get("/internal/admin/services/brand-service/tables/brands/rows?search=acme")
-      .set("X-API-Key", VALID_API_KEY);
+      .set("X-API-Key", VALID_API_KEY).set(STAFF_HUMAN);
 
     expect(res.status).toBe(200);
 

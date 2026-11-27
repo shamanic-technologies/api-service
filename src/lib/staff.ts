@@ -49,3 +49,25 @@ export function isStaffUser(userId: string | null | undefined, storedEmail: stri
   if (!userId || !Object.prototype.hasOwnProperty.call(STAFF_USER_IDS, userId)) return false;
   return storedEmail?.trim().toLowerCase() === STAFF_USER_IDS[userId];
 }
+
+/**
+ * The Clerk user ids (`x-external-user-id`) of the staff HUMANS, each pinned to its staff
+ * email (SECRETS-ROTATE-1127, security hotfix 2026-11-27).
+ *
+ * The platform key is held by every browser-facing proxy (dashboard `/api/v1`, admin) and
+ * was leaked once; a request carrying it says nothing about WHO is behind it. Raw-data
+ * operations (`/internal/admin/*`, `requireStaffHuman`) therefore also demand the verified
+ * Clerk session our proxies stamp as `x-external-user-id` to be one of these, with the
+ * matching `x-email`. Same accounts as `STAFF_USER_IDS` (their `external_id`).
+ */
+export const STAFF_EXTERNAL_USER_IDS: Readonly<Record<string, (typeof STAFF_EMAILS)[number]>> = {
+  user_3AI7TH7LLPltlSpF2UCTD5U1lLa: "kevin.lourd@gmail.com",
+  user_2yaCEpxeoOEIfXTdxTMY8pM8jXW: "kevin@distribute.you",
+};
+
+/** A forwarded Clerk user id + email pair is a pinned staff human. */
+export function isStaffHuman(externalUserId: string | null | undefined, email: string | null | undefined): boolean {
+  const id = externalUserId?.trim();
+  if (!id || !Object.prototype.hasOwnProperty.call(STAFF_EXTERNAL_USER_IDS, id)) return false;
+  return email?.trim().toLowerCase() === STAFF_EXTERNAL_USER_IDS[id];
+}

@@ -91,6 +91,8 @@ import costsRoutes from "./routes/costs.js";
 import costsStaffRoutes from "./routes/costs-staff.js";
 import socialRoutes from "./routes/social.js";
 import adminRoutes from "./routes/admin.js";
+import { refuseTraversalPaths } from "./middleware/path-guard.js";
+import { refuseForwardedIdentity } from "./middleware/server-to-server.js";
 import adminBrandsRoutes from "./routes/admin-brands.js";
 import agentSignupsRoutes from "./routes/agent-signups.js";
 import prepaidRoutes from "./routes/prepaid.js";
@@ -118,6 +120,10 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Path-traversal guard FIRST (SECRETS-ROTATE-1127): a `..`, a backslash or an encoded
+// slash in the path is refused 400 before any router, in every spelling.
+app.use(refuseTraversalPaths);
 
 // CORS - allow dashboard, MCP clients, and public landing pages
 const corsOrigins: string[] = [
@@ -300,7 +306,7 @@ app.use(
 // documented platform operations themselves require — so this exposes nothing
 // to a caller who could not already call them.
 let staffDocument: CatalogueBody | null = null;
-app.get("/internal/openapi.json", authenticatePlatform, (req, res) => {
+app.get("/internal/openapi.json", authenticatePlatform, refuseForwardedIdentity, (req, res) => {
   staffDocument ??= catalogueBody(buildDocument({ audience: "staff" }));
   sendCatalogue(req, res, staffDocument);
 });

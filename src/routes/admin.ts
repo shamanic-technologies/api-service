@@ -1,11 +1,17 @@
 import { Router, Request, Response } from "express";
-import { authenticatePlatform } from "../middleware/auth.js";
+import { authenticatePlatform, requireStaffHuman } from "../middleware/auth.js";
 import { callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import pg from "pg";
 
 const { Pool } = pg;
 
 const router = Router();
+
+// Every `/internal/admin/*` operation (raw service tables, org teardown) is for a pinned
+// staff HUMAN only (SECRETS-ROTATE-1127): the platform key alone, or with a customer's
+// session behind it, is refused 403 `staff_human_required`. Scoped to `/admin` because this
+// router is mounted at `/internal` beside `internal-emails` (server-to-server).
+router.use("/admin", authenticatePlatform, requireStaffHuman);
 
 // ── Service → DATABASE_URL env var registry ─────────────────────────────────
 const SERVICE_DB_REGISTRY: Record<string, string> = {
@@ -47,6 +53,18 @@ const SERVICE_DB_REGISTRY: Record<string, string> = {
   "workflow-service": "WORKFLOW_SERVICE_DATABASE_URL",
   "workflow-service-v1": "WORKFLOW_SERVICE_V1_DATABASE_URL",
 };
+
+// Credential columns are NEVER served by the table browser, staff included
+// (SECRETS-ROTATE-1127: on 2026-11-20 it served OAuth refresh/access tokens, Stripe client
+// secrets and share tokens in clear). A column whose NAME matches is replaced by
+// "[redacted]" in every row, and is never searchable or sortable (a LIKE on it is an oracle).
+export const CREDENTIAL_COLUMN_RE =
+  /token|secret|password|passwd|api_?key|apikey|cookie|refresh|dsn|credential|private_?key|session_?key|signing|salt|otp|pin_?hash|hash/i;
+export const REDACTED = "[redacted]";
+
+export function isCredentialColumn(name: string): boolean {
+  return CREDENTIAL_COLUMN_RE.test(name);
+}
 
 // Lazy-initialized pools per service
 const pools = new Map<string, pg.Pool>();
@@ -199,6 +217,7 @@ router.get("/admin/services/:name/tables/:table/rows", authenticatePlatform, asy
   }
 
   const textColumns = columnsResult.rows
+    .filter((r) => !isCredentialColumn(r.column_name))
     .filter((r) => ["character varying", "text", "varchar", "char", "character"].includes(r.data_type))
     .map((r) => r.column_name);
 
@@ -209,8 +228,8 @@ router.get("/admin/services/:name/tables/:table/rows", authenticatePlatform, asy
   const order = ((req.query.order as string) || "desc").toLowerCase();
   const search = req.query.search as string | undefined;
 
-  // Validate sort column
-  if (!validColumns.includes(sort)) {
+  // Validate sort column (never a credential column: sorting on it leaks its order)
+  if (!validColumns.includes(sort) || isCredentialColumn(sort)) {
     return res.status(400).json({
       error: `Invalid sort column "${sort}". Valid columns: ${validColumns.join(", ")}`,
     });
@@ -246,8 +265,18 @@ router.get("/admin/services/:name/tables/:table/rows", authenticatePlatform, asy
     pool.query(countQuery, countParams),
   ]);
 
+  const credentialColumns = validColumns.filter(isCredentialColumn);
+  const rows = dataResult.rows.map((row) => {
+    if (credentialColumns.length === 0) return row;
+    const safe = { ...row };
+    for (const col of credentialColumns) {
+      if (safe[col] !== null && safe[col] !== undefined) safe[col] = REDACTED;
+    }
+    return safe;
+  });
+
   res.json({
-    rows: dataResult.rows,
+    rows,
     total: parseInt(countResult.rows[0].total, 10),
     limit,
     offset,

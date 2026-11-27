@@ -113,7 +113,7 @@ describe("a downstream that refuses connections", () => {
 
   it("names the failure even on a route whose catch rebuilds its own { error } envelope", async () => {
     externalServices.billing.url = `http://127.0.0.1:${closedPort}`;
-    const res = await request(buildApp()).get("/v1/promo-codes/welcome");
+    const res = await request(buildApp()).get("/v1/promo-codes/welcome").set("x-email", "kevin@distribute.you");
 
     expect(res.status).toBe(503);
     expect(res.body.code).toBe("upstream_unreachable");
@@ -140,7 +140,7 @@ describe("a downstream that answers with its own error", () => {
     servers.push(await serve(port, 500, { error: "boom" }));
     externalServices.billing.url = `http://127.0.0.1:${port}`;
 
-    const res = await request(buildApp()).get("/v1/promo-codes/welcome");
+    const res = await request(buildApp()).get("/v1/promo-codes/welcome").set("x-email", "kevin@distribute.you");
 
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: JSON.stringify({ error: "boom" }) });
